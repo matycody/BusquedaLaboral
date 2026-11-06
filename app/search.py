@@ -5,7 +5,7 @@ import threading
 import time
 
 from . import config, db
-from .sources import bumeran, companies, computrabajo, gmail, rss
+from .sources import bumeran, companies, computrabajo, gmail, rss, zonajobs
 
 STATE_PATH = os.path.join(config.DATA_DIR, "state.json")
 _lock = threading.Lock()
@@ -27,6 +27,25 @@ def _save_state(**kw):
         json.dump(st, f)
 
 
+def enrich_computrabajo(conf, pause=1.0):
+    """Lee el aviso completo de las ofertas de Computrabajo con buen puntaje y las vuelve a puntuar."""
+    if not conf.get("enabled"):
+        return {"leidos": 0, "fallos": 0}
+    ok = bad = 0
+    for item in db.pending_descriptions("Computrabajo", limit=int(conf.get("max_details", 25))):
+        try:
+            text = computrabajo.fetch_detail(item["url"])
+            if text:
+                db.set_description(item["id"], text)
+                ok += 1
+        except Exception:
+            bad += 1
+            if bad >= 3:  # si falla seguido, mejor frenar que insistir
+                break
+        time.sleep(pause)
+    return {"leidos": ok, "fallos": bad}
+
+
 def run_search():
     """Devuelve el resultado, o None si ya hay otra búsqueda corriendo."""
     if not _lock.acquire(blocking=False):
@@ -36,7 +55,7 @@ def run_search():
         feeds = cfg.get("rss_feeds", [])
         con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
         portales = cfg.get("portales", {})
-        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran))
+        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs))
                    if portales.get(name.lower(), {}).get("enabled") and portales.get(name.lower(), {}).get("queries")]
         gm = cfg.get("gmail", {})
         gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")
@@ -59,6 +78,7 @@ def run_search():
             except Exception as e:
                 greport = [{"correo": "", "encontradas": 0, "nota": f"No se pudo leer Gmail: {e}"}]
         res = db.upsert_jobs(jobs + cjobs + pjobs + gjobs)
+        res["detalles"] = enrich_computrabajo(portales.get("computrabajo", {}))
         res.update({"errores": errors, "empresas": report, "portales": preport, "gmail": greport})
         _save_state(last_search=time.time(), last_added=res["agregadas"])
         return res

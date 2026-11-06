@@ -3,6 +3,7 @@
 URL de búsqueda:  https://ar.computrabajo.com/trabajo-de-<puesto>-en-<region>?p=<pagina>
 """
 import html as htmllib
+from html.parser import HTMLParser
 import re
 import time
 import urllib.request
@@ -63,6 +64,61 @@ def parse_page(page_html):
             "source": "Computrabajo", "url": BASE + href if href.startswith("/") else href,
         })
     return jobs
+
+
+class _Detail(HTMLParser):
+    """Extrae el texto del bloque <div div-link="oferta">, sin los botones del final."""
+
+    def __init__(self):
+        super().__init__()
+        self.depth = 0          # profundidad dentro del bloque (0 = fuera)
+        self.skip = 0           # profundidad dentro de una zona que se ignora
+        self.parts = []
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if self.depth == 0:
+            if tag == "div" and a.get("div-link") == "oferta":
+                self.depth = 1
+            return
+        if tag == "br":
+            self.parts.append("\n")
+        if tag == "div":
+            self.depth += 1
+            if self.skip:
+                self.skip += 1
+            elif "posSticky" in (a.get("class") or ""):
+                self.skip = 1
+        elif tag in ("p", "li", "h2") and not self.skip:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag):
+        if self.depth == 0:
+            return
+        if tag == "div":
+            self.depth -= 1
+            if self.skip:
+                self.skip -= 1
+        elif tag in ("p", "li", "h2") and not self.skip:
+            self.parts.append("\n")
+
+    def handle_data(self, data):
+        if self.depth and not self.skip:
+            self.parts.append(data)
+
+
+def parse_detail(page_html):
+    """Texto limpio de la descripción y los requisitos de un aviso."""
+    d = _Detail()
+    d.feed(page_html)
+    text = htmllib.unescape("".join(d.parts))
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n", text).strip()
+    return re.sub(r"^Descripción de la oferta\s*", "", text)[:4000]
+
+
+def fetch_detail(url):
+    return parse_detail(_get(url))
 
 
 def _get(url, timeout=20):

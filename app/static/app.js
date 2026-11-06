@@ -273,7 +273,8 @@ async function doSearch() {
       const vacias = (r.empresas || []).filter((x) => !x.encontradas);
       const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
       const emp = vacias.length ? ` Sin puestos legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde Mis empresas.` : "";
-      toast(`${r.agregadas} ofertas nuevas.${por}${gm}${errs}${emp}`);
+      const det = r.detalles?.leidos ? ` Leí el aviso completo de ${r.detalles.leidos} ofertas de Computrabajo para puntuarlas mejor.` : "";
+      toast(`${r.agregadas} ofertas nuevas.${det}${por}${gm}${errs}${emp}`);
       console.info("Revisión", { empresas: r.empresas, portales: r.portales, gmail: r.gmail, errores: r.errores });
     }
     await loadJobs();
@@ -389,6 +390,7 @@ function openConfig() {
   $("cBuPages").value = bu.max_pages || 2;
   $("cBuZonas").value = (bu.zonas || []).join("\n");
   $("cBuQ").value = (bu.queries || []).join("\n");
+  $("cZjOn").checked = !!((c.portales || {}).zonajobs || {}).enabled;
   $("cEmp").value = (c.empresas || []).map((e) => (e.url ? `${e.name} | ${e.url}` : e.name)).join("\n");
   $("cPen").value = objToLines(c.penalize || {});
   $("cProfiles").innerHTML = Object.entries(c.profiles)
@@ -422,6 +424,7 @@ async function saveConfig(ev) {
       queries: textToList($("cBuQ").value),
     },
   };
+  cfg.portales.zonajobs = { ...(cfg.portales.zonajobs || {}), enabled: $("cZjOn").checked };
   cfg.empresas = textToList($("cEmp").value).map((l) => {
     const [name, ...rest] = l.split("|");
     return { name: name.trim(), url: rest.join("|").trim() };

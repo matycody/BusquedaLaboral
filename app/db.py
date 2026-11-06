@@ -56,6 +56,36 @@ def upsert_jobs(jobs):
     return {"agregadas": added, "fuentes_nuevas_en_existentes": merged}
 
 
+def pending_descriptions(source, min_score=40, limit=25):
+    """Ofertas de un portal con descripción corta (solo título) y puntaje prometedor, mejores primero."""
+    out = []
+    with conn() as c:
+        for r in c.execute(
+            "SELECT id, sources FROM jobs WHERE score>=? AND length(description)<200 AND status!='descartada' "
+            "ORDER BY score DESC, created DESC", (min_score,)).fetchall():
+            for src in json.loads(r["sources"]):
+                if src["name"] == source and src.get("url"):
+                    out.append({"id": r["id"], "url": src["url"]})
+                    break
+            if len(out) >= limit:
+                break
+    return out
+
+
+def set_description(job_id, text):
+    """Guarda la descripción completa y recalcula el puntaje de esa oferta."""
+    cfg = config.load()
+    with conn() as c:
+        r = c.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        if not r:
+            return
+        j = dict(r)
+        j["description"] = text
+        score, cv, per = score_job(j, cfg)
+        c.execute("UPDATE jobs SET description=?, score=?, cv=?, cv_scores=? WHERE id=?",
+                  (text, score, cv, json.dumps(per), job_id))
+
+
 def recalc():
     cfg = config.load()
     n = 0

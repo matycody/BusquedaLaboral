@@ -1,4 +1,4 @@
-"""Bumeran Argentina: usa la API JSON que consume su propio sitio.
+"""Bumeran y ZonaJobs (Argentina): usan la misma API JSON que consume su propio sitio.
 
 POST https://www.bumeran.com.ar/api/avisos/searchV2?pageSize=20&page=N&sort=RECIENTES
 cuerpo {"filtros": [], "query": "<puesto>"}  (requiere el encabezado x-site-id: BMAR)
@@ -13,8 +13,11 @@ from datetime import datetime, timezone
 from ..scoring import norm
 from .http import api_headers, explain
 
-BASE = "https://www.bumeran.com.ar"
-HEADERS = {**api_headers(BASE), "x-site-id": "BMAR"}
+SITES = {
+    "bumeran": {"base": "https://www.bumeran.com.ar", "site_id": "BMAR", "name": "Bumeran"},
+    "zonajobs": {"base": "https://www.zonajobs.com.ar", "site_id": "ZJAR", "name": "ZonaJobs"},
+}
+BASE = SITES["bumeran"]["base"]  # compatibilidad
 
 
 def _slug(text):
@@ -33,7 +36,8 @@ def _iso(dmy_hms):
         return None
 
 
-def to_job(a):
+def to_job(a, site="bumeran"):
+    info = SITES[site]
     company = "" if a.get("confidencial") else (a.get("empresa") or "")
     slug = "-".join(x for x in (_slug(a.get("titulo")), _slug(company)) if x)
     modo = a.get("modalidadTrabajo") or ""
@@ -43,20 +47,22 @@ def to_job(a):
         "title": a.get("titulo", "").strip(), "company": company or "Confidencial",
         "location": a.get("localizacion") or "",
         "description": (head + ". " if head else "") + _text(a.get("detalle"))[:1500],
-        "posted": _iso(a.get("fechaHoraPublicacion")), "source": "Bumeran",
-        "url": f"{BASE}/empleos/{slug}-{a['id']}.html",
+        "posted": _iso(a.get("fechaHoraPublicacion")), "source": info["name"],
+        "url": f"{info['base']}/empleos/{slug}-{a['id']}.html",
     }
 
 
-def _search(query, page, timeout=20):
-    url = f"{BASE}/api/avisos/searchV2?pageSize=20&page={page}&sort=RECIENTES"
+def _search(query, page, timeout=20, site="bumeran"):
+    info = SITES[site]
+    url = f"{info['base']}/api/avisos/searchV2?pageSize=20&page={page}&sort=RECIENTES"
     body = json.dumps({"filtros": [], "query": query}).encode("utf-8")
-    req = urllib.request.Request(url, data=body, headers=HEADERS, method="POST")
+    headers = {**api_headers(info["base"]), "x-site-id": info["site_id"]}
+    req = urllib.request.Request(url, data=body, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8"))
 
 
-def fetch(conf, pause=1.0):
+def fetch(conf, pause=1.0, site="bumeran"):
     """conf = {"enabled", "queries", "max_pages", "zonas"}. Devuelve (ofertas, informe)."""
     zonas = [norm(z) for z in conf.get("zonas", []) if z.strip()]
     jobs, report = [], []
@@ -64,7 +70,7 @@ def fetch(conf, pause=1.0):
         found, note = 0, ""
         for page in range(int(conf.get("max_pages", 2))):
             try:
-                data = _search(q, page)
+                data = _search(q, page, site=site)
             except Exception as e:
                 note = f"No se pudo leer: {explain(e)}"
                 break
@@ -72,7 +78,7 @@ def fetch(conf, pause=1.0):
             for a in items:
                 if zonas and not any(z in norm(a.get("localizacion")) for z in zonas):
                     continue
-                jobs.append(to_job(a))
+                jobs.append(to_job(a, site))
                 found += 1
             if len(items) < 20:
                 break
