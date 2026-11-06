@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import config, db
-from .sources import companies, computrabajo, demo, rss
+from .sources import bumeran, companies, computrabajo, demo, rss
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
@@ -65,14 +65,19 @@ class Handler(BaseHTTPRequestHandler):
             cfg = config.load()
             feeds = cfg.get("rss_feeds", [])
             con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
-            ct = cfg.get("portales", {}).get("computrabajo", {})
-            use_ct = bool(ct.get("enabled") and ct.get("queries"))
-            if not feeds and not con_url and not use_ct:
+            portales = cfg.get("portales", {})
+            activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran))
+                       if portales.get(name.lower(), {}).get("enabled") and portales.get(name.lower(), {}).get("queries")]
+            if not feeds and not con_url and not activos:
                 return self._json({"agregadas": 0, "errores": [], "empresas": [], "portales": [],
                                    "aviso": "No hay fuentes cargadas. Activá un portal, agregá feeds RSS o empresas con link en Configuración."})
             jobs, errors = rss.fetch(feeds) if feeds else ([], [])
             cjobs, report = companies.fetch(cfg)
-            pjobs, preport = computrabajo.fetch(ct) if use_ct else ([], [])
+            pjobs, preport = [], []
+            for name, mod in activos:
+                got, rep = mod.fetch(portales[name.lower()])
+                pjobs += got
+                preport += [{**r, "portal": name} for r in rep]
             res = db.upsert_jobs(jobs + cjobs + pjobs)
             res["errores"] = errors
             res["empresas"] = report

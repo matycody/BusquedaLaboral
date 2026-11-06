@@ -253,7 +253,7 @@ async function doSearch() {
       const fallas = (r.portales || []).filter((x) => x.nota);
       const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
       const emp = vacias.length ? ` Sin resultados legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde el panel Mis empresas.` : "";
-      const por = fallas.length ? ` Computrabajo falló en ${fallas.length} búsqueda(s): ${fallas[0].nota}` : "";
+      const por = fallas.length ? ` ${fallas[0].portal} falló en ${fallas.length} búsqueda(s): ${fallas[0].nota}` : "";
       toast(`${r.agregadas} ofertas nuevas.${errs}${por}${emp}`);
       console.info("Revisión", { empresas: r.empresas, portales: r.portales, errores: r.errores });
     }
@@ -296,6 +296,11 @@ function openConfig() {
   $("cCtRegion").value = ct.region || "buenos-aires-gba";
   $("cCtPages").value = ct.max_pages || 2;
   $("cCtQ").value = (ct.queries || []).join("\n");
+  const bu = (c.portales || {}).bumeran || {};
+  $("cBuOn").checked = !!bu.enabled;
+  $("cBuPages").value = bu.max_pages || 2;
+  $("cBuZonas").value = (bu.zonas || []).join("\n");
+  $("cBuQ").value = (bu.queries || []).join("\n");
   $("cEmp").value = (c.empresas || []).map((e) => (e.url ? `${e.name} | ${e.url}` : e.name)).join("\n");
   $("cPen").value = objToLines(c.penalize || {});
   $("cProfiles").innerHTML = Object.entries(c.profiles)
@@ -321,6 +326,12 @@ async function saveConfig(ev) {
       region: $("cCtRegion").value.trim() || "buenos-aires-gba",
       max_pages: Math.min(5, Math.max(1, Number($("cCtPages").value) || 2)),
       queries: textToList($("cCtQ").value),
+    },
+    bumeran: {
+      enabled: $("cBuOn").checked,
+      max_pages: Math.min(5, Math.max(1, Number($("cBuPages").value) || 2)),
+      zonas: textToList($("cBuZonas").value),
+      queries: textToList($("cBuQ").value),
     },
   };
   cfg.empresas = textToList($("cEmp").value).map((l) => {

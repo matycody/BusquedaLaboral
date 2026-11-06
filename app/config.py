@@ -46,7 +46,14 @@ DEFAULT = {
             "max_pages": 2,
             "queries": ["electricista", "ayudante electricista", "tablerista", "mantenimiento electrico",
                         "programador", "desarrollador web", "desarrollador python", "analista de datos", "soporte tecnico"],
-        }
+        },
+        "bumeran": {
+            "enabled": True,
+            "max_pages": 2,
+            "zonas": ["buenos aires", "capital federal", "caba", "remoto"],
+            "queries": ["electricista", "ayudante electricista", "tablerista", "mantenimiento electrico",
+                        "programador", "desarrollador web", "desarrollador python", "analista de datos", "soporte tecnico"],
+        },
     },
     "rss_feeds": [],
 }

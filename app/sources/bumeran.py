@@ -1,0 +1,87 @@
+"""Bumeran Argentina: usa la API JSON que consume su propio sitio.
+
+POST https://www.bumeran.com.ar/api/avisos/searchV2?pageSize=20&page=N&sort=RECIENTES
+cuerpo {"filtros": [], "query": "<puesto>"}  (requiere el encabezado x-site-id: BMAR)
+"""
+import html as htmllib
+import json
+import re
+import time
+import urllib.request
+from datetime import datetime, timezone
+
+from ..scoring import norm
+
+BASE = "https://www.bumeran.com.ar"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (BusquedaLaboral personal)",
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "x-site-id": "BMAR",
+    "Origin": BASE,
+}
+
+
+def _slug(text):
+    return re.sub(r"[^a-z0-9]+", "-", norm(text)).strip("-")
+
+
+def _text(s):
+    return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", " ", s or "")).split())
+
+
+def _iso(dmy_hms):
+    try:
+        d = datetime.strptime(dmy_hms, "%d-%m-%Y %H:%M:%S")
+        return d.replace(tzinfo=timezone.utc).isoformat()
+    except (TypeError, ValueError):
+        return None
+
+
+def to_job(a):
+    company = "" if a.get("confidencial") else (a.get("empresa") or "")
+    slug = "-".join(x for x in (_slug(a.get("titulo")), _slug(company)) if x)
+    modo = a.get("modalidadTrabajo") or ""
+    tipo = a.get("tipoTrabajo") or ""
+    head = " | ".join(x for x in (modo, tipo) if x)
+    return {
+        "title": a.get("titulo", "").strip(), "company": company or "Confidencial",
+        "location": a.get("localizacion") or "",
+        "description": (head + ". " if head else "") + _text(a.get("detalle"))[:1500],
+        "posted": _iso(a.get("fechaHoraPublicacion")), "source": "Bumeran",
+        "url": f"{BASE}/empleos/{slug}-{a['id']}.html",
+    }
+
+
+def _search(query, page, timeout=20):
+    url = f"{BASE}/api/avisos/searchV2?pageSize=20&page={page}&sort=RECIENTES"
+    body = json.dumps({"filtros": [], "query": query}).encode("utf-8")
+    req = urllib.request.Request(url, data=body, headers=HEADERS, method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def fetch(conf, pause=1.0):
+    """conf = {"enabled", "queries", "max_pages", "zonas"}. Devuelve (ofertas, informe)."""
+    zonas = [norm(z) for z in conf.get("zonas", []) if z.strip()]
+    jobs, report = [], []
+    for q in conf.get("queries", []):
+        found, note = 0, ""
+        for page in range(int(conf.get("max_pages", 2))):
+            try:
+                data = _search(q, page)
+            except Exception as e:
+                note = f"No se pudo leer: {e}"
+                break
+            items = data.get("content", [])
+            for a in items:
+                if zonas and not any(z in norm(a.get("localizacion")) for z in zonas):
+                    continue
+                jobs.append(to_job(a))
+                found += 1
+            if len(items) < 20:
+                break
+            time.sleep(pause)
+        time.sleep(pause)
+        report.append({"busqueda": q, "encontradas": found, "nota": note})
+    return jobs, report
