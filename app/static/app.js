@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const state = { cfg: null, jobs: [], tab: "activas", sort: "score", openId: null, cv: "" };
+const state = { cfg: null, jobs: [], tab: "activas", sort: "score", openId: null, cv: "", src: "" };
 
 const TABS = [
   ["activas", "Activas"],
@@ -111,12 +111,29 @@ async function loadJobs() {
     toast("No se pudieron cargar las ofertas. ¿Sigue corriendo run.py?");
     state.jobs = [];
   }
+  renderSourceFilter();
   render();
   checkAlerts();
 }
 
+const isAlert = (name) => name.startsWith("Alerta ");
+
+function matchesSource(j) {
+  if (!state.src) return true;
+  if (state.src === "__gmail") return j.sources.some((s) => isAlert(s.name));
+  return j.sources.some((s) => s.name === state.src);
+}
+
+function renderSourceFilter() {
+  const names = [...new Set(state.jobs.flatMap((j) => j.sources.map((s) => s.name)))].sort();
+  const opts = [["", "Todas"]];
+  if (names.some(isAlert)) opts.push(["__gmail", "Todas las alertas de Gmail"]);
+  names.forEach((n) => opts.push([n, n]));
+  $("fSrc").innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}" ${state.src === v ? "selected" : ""}>${esc(l)}</option>`).join("");
+}
+
 function filtersActive() {
-  return !!($("fOnlyEmp").checked || $("fQ").value.trim() || $("fLoc").value.trim() || state.cv || Number($("fMin").value));
+  return !!(state.src || $("fOnlyEmp").checked || $("fQ").value.trim() || $("fLoc").value.trim() || state.cv || Number($("fMin").value));
 }
 
 function renderCvFilter() {
@@ -143,7 +160,7 @@ function render() {
   }).join("");
 
   const onlyEmp = $("fOnlyEmp").checked;
-  const rows = state.jobs.filter((j) => inTab(j, state.tab) && (!onlyEmp || isMyCompany(j.company)));
+  const rows = state.jobs.filter((j) => inTab(j, state.tab) && (!onlyEmp || isMyCompany(j.company)) && matchesSource(j));
   rows.sort((a, b) =>
     state.sort === "recent"
       ? String(b.posted || b.created).localeCompare(String(a.posted || a.created))
@@ -526,6 +543,7 @@ function clearFilters() {
   $("fOnlyEmp").checked = false;
   $("fMinOut").textContent = "0";
   state.cv = "";
+  state.src = "";
   renderCvFilter();
   loadJobs();
 }
@@ -538,6 +556,10 @@ function bind() {
   $("fMin").addEventListener("input", () => {
     $("fMinOut").textContent = $("fMin").value;
     reload();
+  });
+  $("fSrc").addEventListener("change", (e) => {
+    state.src = e.target.value;
+    render();
   });
   $("fCv").addEventListener("change", (e) => {
     state.cv = e.target.value;
