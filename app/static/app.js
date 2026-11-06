@@ -390,6 +390,7 @@ function openConfig() {
   $("cBuPages").value = bu.max_pages || 2;
   $("cBuZonas").value = (bu.zonas || []).join("\n");
   $("cBuQ").value = (bu.queries || []).join("\n");
+  $("cBjOn").checked = !!((c.portales || {}).buscojobs || {}).enabled;
   $("cZjOn").checked = !!((c.portales || {}).zonajobs || {}).enabled;
   $("cEmp").value = (c.empresas || []).map((e) => (e.url ? `${e.name} | ${e.url}` : e.name)).join("\n");
   $("cPen").value = objToLines(c.penalize || {});
@@ -424,6 +425,7 @@ async function saveConfig(ev) {
       queries: textToList($("cBuQ").value),
     },
   };
+  cfg.portales.buscojobs = { ...(cfg.portales.buscojobs || {}), enabled: $("cBjOn").checked };
   cfg.portales.zonajobs = { ...(cfg.portales.zonajobs || {}), enabled: $("cZjOn").checked };
   cfg.empresas = textToList($("cEmp").value).map((l) => {
     const [name, ...rest] = l.split("|");

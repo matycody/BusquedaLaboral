@@ -66,6 +66,13 @@ DEFAULT = {
             "queries": ["electricista", "ayudante electricista", "tablerista", "mantenimiento electrico",
                         "programador", "desarrollador web", "desarrollador python", "analista de datos", "soporte tecnico"],
         },
+        "buscojobs": {
+            "enabled": True,
+            "max_pages": 2,
+            "zonas": ["buenos aires", "capital federal", "caba", "remoto"],
+            "queries": ["electricista", "ayudante electricista", "tablerista", "mantenimiento electrico",
+                        "programador", "desarrollador web", "analista de datos", "soporte tecnico"],
+        },
         "zonajobs": {
             "enabled": True,
             "max_pages": 2,

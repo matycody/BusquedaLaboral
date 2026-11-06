@@ -15,7 +15,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 ## Qué hace hoy
 
 - **Ofertas de ejemplo**: en Configuración → Datos (o desde la pantalla vacía) cargás ofertas de prueba, con duplicados entre portales para ver el agrupado.
-- **Buscar ofertas**: lee Computrabajo, Bumeran y ZonaJobs (puestos y zona configurables), las páginas de tus empresas, tus alertas de Gmail y los feeds RSS cargados en ⚙ Configuración.
+- **Buscar ofertas**: lee Computrabajo, Bumeran, ZonaJobs y BuscoJobs (puestos y zona configurables), las páginas de tus empresas, tus alertas de Gmail y los feeds RSS cargados en ⚙ Configuración.
 - **+ Agregar oferta**: pegás un aviso a mano (sirve para cualquier portal).
 - **Alertas por Gmail**: lee (solo lectura) los mails de alertas de los portales y los suma a la lista. Hace falta una contraseña de aplicación de Google (verificación en 2 pasos + myaccount.google.com/apppasswords). Se guarda en `data/secrets.json`, que no se sube a GitHub; también podés usar la variable de entorno `GMAIL_APP_PASSWORD`. Después creá alertas de empleo en cada portal con ese mismo mail.
 - **Búsqueda automática**: en Configuración elegís cada cuántas horas busca sola (mientras el programa esté abierto). Las ofertas de las últimas 24 h llevan la etiqueta "Nueva" y la lista se actualiza sola.
@@ -46,6 +46,7 @@ app/sources/computrabajo.py  lector de Computrabajo Argentina
 app/sources/gmail.py         alertas de empleo desde Gmail (IMAP, solo lectura)
 app/sources/bumeran.py       lector de Bumeran Argentina (API interna de su sitio)
 app/sources/zonajobs.py      lector de ZonaJobs (misma API que Bumeran)
+app/sources/buscojobs.py     lector de BuscoJobs (JSON embebido en la página de resultados)
 app/sources/rss.py      lector genérico de feeds RSS/Atom
 app/static/index.html   estructura de la página
 app/static/styles.css   estilos
