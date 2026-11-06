@@ -15,7 +15,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 ## Qué hace hoy
 
 - **Ofertas de ejemplo**: en Configuración → Datos (o desde la pantalla vacía) cargás ofertas de prueba, con duplicados entre portales para ver el agrupado.
-- **Buscar ofertas**: lee las fuentes RSS cargadas en ⚙ Configuración.
+- **Buscar ofertas**: lee Computrabajo (puestos y zona configurables), las páginas de tus empresas y los feeds RSS cargados en ⚙ Configuración.
 - **+ Agregar oferta**: pegás un aviso a mano (sirve para cualquier portal).
 - **Mis empresas** (Genrod, Edesur, Coto, Mercado Libre, Ualá): panel con link a su página de empleos o búsqueda en LinkedIn; sus ofertas suman +10 puntos, llevan la etiqueta "Mi empresa" y se pueden filtrar. Si cargás el link de empleos, **Buscar ofertas** lo revisa. Mercado Libre (puestos de Argentina) y Ualá tienen lector propio; las demás usan un lector genérico que solo ve lo que está en el HTML, y si una página sale vacía se avisa.
 - **Filtros**: texto, lugar, CV recomendado, estado, puntaje mínimo.
@@ -38,6 +38,7 @@ app/db.py               base SQLite + agrupado de duplicados
 app/config.py           configuración (data/config.json)
 app/sources/demo.py     ofertas de ejemplo
 app/sources/companies.py  lectores de las páginas de empleo (Mercado Libre, Ualá y genérico)
+app/sources/computrabajo.py  lector de Computrabajo Argentina
 app/sources/rss.py      lector genérico de feeds RSS/Atom
 app/static/index.html   estructura de la página
 app/static/styles.css   estilos
@@ -47,5 +48,5 @@ data/                   tu base y configuración (NO se sube a GitHub)
 
 ## Pendiente / próximos pasos
 
-- Fuentes por portal (Computrabajo, Bumeran, Indeed, LinkedIn, etc.): cada portal tiene sus reglas y bloquea scrapers, así que se agregan de a una en `app/sources/`.
+- Más portales (Bumeran, Indeed, LinkedIn, etc.): cada portal tiene sus reglas y bloquea scrapers, así que se agregan de a una en `app/sources/`.
 - Alertas por Gmail.

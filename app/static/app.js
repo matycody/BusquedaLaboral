@@ -250,10 +250,12 @@ async function doSearch() {
       toast(r.aviso);
     } else {
       const vacias = (r.empresas || []).filter((x) => !x.encontradas);
+      const fallas = (r.portales || []).filter((x) => x.nota);
       const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
       const emp = vacias.length ? ` Sin resultados legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde el panel Mis empresas.` : "";
-      toast(`${r.agregadas} ofertas nuevas.${errs}${emp}`);
-      console.info("Revisión de empresas", r.empresas, r.errores);
+      const por = fallas.length ? ` Computrabajo falló en ${fallas.length} búsqueda(s): ${fallas[0].nota}` : "";
+      toast(`${r.agregadas} ofertas nuevas.${errs}${por}${emp}`);
+      console.info("Revisión", { empresas: r.empresas, portales: r.portales, errores: r.errores });
     }
     await loadJobs();
   });
@@ -289,6 +291,11 @@ function openConfig() {
   $("cLocation").value = c.location || "";
   $("cLocs").value = (c.locations_ok || []).join("\n");
   $("cRss").value = (c.rss_feeds || []).join("\n");
+  const ct = (c.portales || {}).computrabajo || {};
+  $("cCtOn").checked = !!ct.enabled;
+  $("cCtRegion").value = ct.region || "buenos-aires-gba";
+  $("cCtPages").value = ct.max_pages || 2;
+  $("cCtQ").value = (ct.queries || []).join("\n");
   $("cEmp").value = (c.empresas || []).map((e) => (e.url ? `${e.name} | ${e.url}` : e.name)).join("\n");
   $("cPen").value = objToLines(c.penalize || {});
   $("cProfiles").innerHTML = Object.entries(c.profiles)
@@ -307,6 +314,15 @@ async function saveConfig(ev) {
   cfg.location = $("cLocation").value.trim();
   cfg.locations_ok = textToList($("cLocs").value);
   cfg.rss_feeds = textToList($("cRss").value);
+  cfg.portales = {
+    ...(cfg.portales || {}),
+    computrabajo: {
+      enabled: $("cCtOn").checked,
+      region: $("cCtRegion").value.trim() || "buenos-aires-gba",
+      max_pages: Math.min(5, Math.max(1, Number($("cCtPages").value) || 2)),
+      queries: textToList($("cCtQ").value),
+    },
+  };
   cfg.empresas = textToList($("cEmp").value).map((l) => {
     const [name, ...rest] = l.split("|");
     return { name: name.trim(), url: rest.join("|").trim() };

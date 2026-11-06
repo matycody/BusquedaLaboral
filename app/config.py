@@ -39,6 +39,15 @@ DEFAULT = {
         {"name": "Ualá", "url": "https://www.ua.la/sumate"},
     ],
     "company_bonus": 10,
+    "portales": {
+        "computrabajo": {
+            "enabled": True,
+            "region": "buenos-aires-gba",
+            "max_pages": 2,
+            "queries": ["electricista", "ayudante electricista", "tablerista", "mantenimiento electrico",
+                        "programador", "desarrollador web", "desarrollador python", "analista de datos", "soporte tecnico"],
+        }
+    },
     "rss_feeds": [],
 }
 

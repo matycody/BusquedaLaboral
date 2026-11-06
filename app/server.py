@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import config, db
-from .sources import companies, demo, rss
+from .sources import companies, computrabajo, demo, rss
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
@@ -65,14 +65,18 @@ class Handler(BaseHTTPRequestHandler):
             cfg = config.load()
             feeds = cfg.get("rss_feeds", [])
             con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
-            if not feeds and not con_url:
-                return self._json({"agregadas": 0, "errores": [], "empresas": [],
-                                   "aviso": "No hay fuentes cargadas. Agregá feeds RSS o empresas con link en Configuración."})
+            ct = cfg.get("portales", {}).get("computrabajo", {})
+            use_ct = bool(ct.get("enabled") and ct.get("queries"))
+            if not feeds and not con_url and not use_ct:
+                return self._json({"agregadas": 0, "errores": [], "empresas": [], "portales": [],
+                                   "aviso": "No hay fuentes cargadas. Activá un portal, agregá feeds RSS o empresas con link en Configuración."})
             jobs, errors = rss.fetch(feeds) if feeds else ([], [])
             cjobs, report = companies.fetch(cfg)
-            res = db.upsert_jobs(jobs + cjobs)
+            pjobs, preport = computrabajo.fetch(ct) if use_ct else ([], [])
+            res = db.upsert_jobs(jobs + cjobs + pjobs)
             res["errores"] = errors
             res["empresas"] = report
+            res["portales"] = preport
             return self._json(res)
         if u.path == "/api/recalc":
             return self._json(db.recalc())
