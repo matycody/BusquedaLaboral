@@ -7,7 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, search
+from . import config, db, scoring, search
 from .sources import demo
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -54,6 +54,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        if u.path == "/api/explain":
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            job = db.get_job(int(q.get("id") or 0))
+            if not job:
+                return self._json({"items": [], "total": 0}, 404)
+            return self._json(scoring.explain(job, config.load()))
         if u.path == "/api/config":
             return self._json(config.load())
         if u.path == "/api/status":

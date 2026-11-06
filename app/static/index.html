@@ -31,54 +31,55 @@
   </div>
 </header>
 
-<div class="layout">
-  <button class="btn filters-toggle" id="btnFilters" aria-expanded="false" aria-controls="filters">Filtros</button>
-  <aside class="filters" id="filters" aria-label="Filtros">
-    <div class="field">
-      <label for="fQ">Buscar</label>
-      <input class="input" id="fQ" type="search" placeholder="Puesto o empresa">
+<section class="filterbar" id="filters" aria-label="Filtros">
+  <div class="fb-inner">
+    <div class="fb-main">
+      <input class="input fb-search" id="fQ" type="search" placeholder="Buscar puesto o empresa" aria-label="Buscar puesto o empresa">
+      <input class="input fb-loc" id="fLoc" type="search" placeholder="Lugar (ej: Quilmes, remoto)" aria-label="Lugar">
+      <button class="btn filters-toggle" id="btnFilters" aria-expanded="false" aria-controls="filtersMore">Filtros</button>
     </div>
-    <div class="field">
-      <label for="fLoc">Lugar</label>
-      <input class="input" id="fLoc" type="search" placeholder="Ej: Quilmes, remoto">
+    <div class="fb-more" id="filtersMore">
+      <label class="pill"><span>CV</span><select id="fCv"></select></label>
+      <label class="pill"><span>Fuente</span><select id="fSrc"><option value="">Todas</option></select></label>
+      <label class="pill"><span>Puntaje</span>
+        <select id="fMin">
+          <option value="0">Todos</option>
+          <option value="40">40 o más</option>
+          <option value="60">60 o más</option>
+          <option value="75">75 o más</option>
+        </select>
+      </label>
+      <details class="menu" id="empMenu">
+        <summary class="pill">Mis empresas</summary>
+        <div class="menu-panel">
+          <label class="seg-option"><input type="checkbox" id="fOnlyEmp"> Mostrar solo estas empresas</label>
+          <ul class="companies" id="companies" aria-label="Mis empresas"></ul>
+        </div>
+      </details>
+      <button class="btn btn-quiet btn-clear" id="btnClear">Limpiar filtros</button>
     </div>
-    <div class="field">
-      <label for="fSrc">Fuente</label>
-      <select class="input" id="fSrc"><option value="">Todas</option></select>
-    </div>
-    <div class="field">
-      <span class="label" id="cvLabel">CV recomendado</span>
-      <div class="segmented" id="fCv" role="radiogroup" aria-labelledby="cvLabel"></div>
-    </div>
-    <div class="field">
-      <label for="fMin">Puntaje mínimo</label>
-      <div class="range-row">
-        <input id="fMin" type="range" min="0" max="100" step="5" value="0">
-        <output id="fMinOut" for="fMin">0</output>
-      </div>
-    </div>
-    <div class="field">
-      <span class="label" id="empLabel">Mis empresas</span>
-      <label class="seg-option"><input type="checkbox" id="fOnlyEmp"> Mostrar solo estas empresas</label>
-      <ul class="companies" id="companies" aria-labelledby="empLabel"></ul>
-    </div>
-    <button class="btn btn-quiet btn-clear" id="btnClear">Limpiar filtros</button>
-  </aside>
+  </div>
+</section>
 
-  <main class="results">
+<div class="layout" id="layout">
+  <main class="pane-list">
     <div class="tabs" role="tablist" id="tabs"></div>
     <div class="toolbar">
       <span class="toolbar-count"><span id="count" aria-live="polite"></span><span class="hint" id="lastSearch"></span></span>
-      <a class="btn btn-sm" id="btnExport" href="/api/export?status=aplicada" download hidden>Exportar a planilla</a>
-      <label>Ordenar por
-        <select class="input" id="fSort">
-          <option value="score">Mejor puntaje</option>
-          <option value="recent">Más recientes</option>
-        </select>
-      </label>
+      <span class="toolbar-right">
+        <a class="btn btn-sm" id="btnExport" href="/api/export?status=aplicada" download hidden>Exportar</a>
+        <label class="sort">Orden
+          <select class="input" id="fSort">
+            <option value="score">Mejor puntaje</option>
+            <option value="recent">Más recientes</option>
+          </select>
+        </label>
+      </span>
     </div>
     <ul class="list" id="list"></ul>
+    <p class="hint keys">Atajos: ↑ ↓ para moverte · S guardar · D descartar · A aplicada</p>
   </main>
+  <section class="pane-detail" id="detail" aria-label="Detalle de la oferta"></section>
 </div>
 
 <dialog id="dAdd">

@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const state = { cfg: null, jobs: [], tab: "activas", sort: "score", openId: null, cv: "", src: "" };
+const state = { cfg: null, jobs: [], tab: "activas", sort: "score", openId: null, cv: "", src: "", why: {} };
 
 const TABS = [
   ["activas", "Activas"],
@@ -105,6 +105,7 @@ async function loadJobs() {
     cv: state.cv,
     min_score: $("fMin").value,
   });
+  state.why = {};
   try {
     state.jobs = await api("/api/jobs?" + p);
   } catch (e) {
@@ -137,28 +138,20 @@ function filtersActive() {
 }
 
 function renderCvFilter() {
-  const opts = [["", "Todos", ""], ...Object.entries(state.cfg.profiles).map(([k, p]) => [k, p.label, k])];
+  const opts = [["", "Todos"], ...Object.entries(state.cfg.profiles).map(([k, p]) => [k, p.label])];
   $("fCv").innerHTML = opts
-    .map(
-      ([v, label, dot]) => `<label class="seg-option">
-        <input type="radio" name="cv" value="${esc(v)}" ${state.cv === v ? "checked" : ""}>
-        ${dot ? `<span class="dot dot-${esc(dot)}"></span>` : ""}${esc(label)}</label>`
-    )
+    .map(([v, label]) => `<option value="${esc(v)}" ${state.cv === v ? "selected" : ""}>${esc(label)}</option>`)
     .join("");
 }
 
 /* ---------- render ---------- */
+const isMobile = () => matchMedia("(max-width: 900px)").matches;
+
 function inTab(j, tab) {
   return tab === "activas" ? j.status !== "descartada" && j.status !== "aplicada" : j.status === tab;
 }
 
-function render() {
-  // pestañas con contador
-  $("tabs").innerHTML = TABS.map(([k, label]) => {
-    const n = state.jobs.filter((j) => inTab(j, k)).length;
-    return `<button class="tab" role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${label}<span class="tab-count">${n}</span></button>`;
-  }).join("");
-
+function visibleRows() {
   const onlyEmp = $("fOnlyEmp").checked;
   const rows = state.jobs.filter((j) => inTab(j, state.tab) && (!onlyEmp || isMyCompany(j.company)) && matchesSource(j));
   rows.sort((a, b) =>
@@ -166,21 +159,43 @@ function render() {
       ? String(b.posted || b.created).localeCompare(String(a.posted || a.created))
       : b.score - a.score
   );
+  return rows;
+}
 
+function render() {
+  $("tabs").innerHTML = TABS.map(([k, label]) => {
+    const n = state.jobs.filter((j) => inTab(j, k)).length;
+    return `<button class="tab" role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${label}<span class="tab-count">${n}</span></button>`;
+  }).join("");
+
+  const rows = visibleRows();
   const ex = $("btnExport");
   ex.hidden = !["aplicada", "interesa"].includes(state.tab);
   ex.href = "/api/export?status=" + state.tab;
   $("count").textContent = rows.length === 1 ? "1 oferta" : `${rows.length} ofertas`;
 
   if (!rows.length) {
+    state.openId = null;
     $("list").innerHTML = `<li>${emptyState()}</li>`;
+    $("detail").innerHTML = detailPlaceholder();
+    syncDetailMode();
     return;
   }
+  if (!rows.some((j) => j.id === state.openId)) state.openId = isMobile() ? null : rows[0].id;
+
   const due = state.tab === "aplicada" ? rows.filter(needsFollowUp).length : 0;
   const banner = due
-    ? `<li><div class="empty" style="padding:12px 16px;text-align:left"><strong>${due === 1 ? "1 postulación lleva" : due + " postulaciones llevan"} varios días sin novedades.</strong> Escribile a la empresa para preguntar cómo sigue.</div></li>`
+    ? `<li><div class="notice"><strong>${due === 1 ? "1 postulación lleva" : due + " postulaciones llevan"} varios días sin novedades.</strong> Escribile a la empresa para preguntar cómo sigue.</div></li>`
     : "";
-  $("list").innerHTML = banner + rows.map(jobHtml).join("");
+  $("list").innerHTML = banner + rows.map(cardHtml).join("");
+  renderDetail();
+  syncDetailMode();
+}
+
+function syncDetailMode() {
+  const open = isMobile() && state.openId != null;
+  $("layout").classList.toggle("show-detail", open);
+  document.body.classList.toggle("detail-open", open);
 }
 
 function emptyState() {
@@ -191,7 +206,7 @@ function emptyState() {
   }
   if (state.tab === "activas" && !state.jobs.length) {
     return `<div class="empty"><h3>Todavía no hay ofertas</h3>
-      <p>Cargá las de ejemplo para ver cómo funciona, agregá un aviso a mano o configurá fuentes RSS para buscar solo.</p>
+      <p>Tocá Buscar ofertas, cargá las de ejemplo para ver cómo funciona o agregá un aviso a mano.</p>
       <div class="row">
         <button class="btn btn-primary" data-act="demo">Cargar ofertas de ejemplo</button>
         <button class="btn" data-act="add">Agregar oferta</button>
@@ -200,17 +215,27 @@ function emptyState() {
   }
   const msg = {
     activas: "No quedan ofertas por revisar.",
-    interesa: "Marcá una oferta con Me interesa y aparece acá.",
+    interesa: "Marcá una oferta con la estrella y aparece acá.",
     aplicada: "Cuando marques una oferta como Aplicada la vas a ver acá.",
     descartada: "No descartaste ninguna oferta.",
   }[state.tab];
   return `<div class="empty"><h3>${esc(msg)}</h3></div>`;
 }
 
-function meter(score) {
-  const on = Math.round(score / 10);
-  const tier = score >= 70 ? "high" : score >= 40 ? "mid" : "low";
-  return `<div class="meter ${tier}" aria-hidden="true">${Array.from({ length: 10 }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("")}</div>`;
+function detailPlaceholder() {
+  return `<div class="detail-empty"><div><h3>Elegí una oferta</h3><p>Acá vas a ver el detalle, por qué tiene ese puntaje y qué CV conviene usar.</p></div></div>`;
+}
+
+function quality(score) {
+  return score >= 75 ? ["top", "Muy buena"] : score >= 55 ? ["good", "Buena"] : score >= 35 ? ["mid", "Regular"] : ["low", "Baja"];
+}
+
+function avatar(name, big) {
+  const n = name && name !== "Confidencial" ? name.trim() : "";
+  const ch = (n.match(/[A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/) || ["?"])[0].toUpperCase();
+  let h = 0;
+  for (const c of n) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return `<span class="avatar ${big ? "avatar-lg" : ""}" style="--h:${h}" aria-hidden="true">${esc(ch)}</span>`;
 }
 
 const STATUS_LABEL = { interesa: "Me interesa", aplicada: "Aplicada", descartada: "Descartada" };
@@ -224,67 +249,130 @@ function needsFollowUp(j) {
   return j.status === "aplicada" && !!j.applied_at && daysSince(j.applied_at) >= days;
 }
 
-function jobHtml(j) {
-  const open = state.openId === j.id;
-  const meta = [j.company || "Empresa no indicada", j.location || "Lugar no indicado", ago(j.posted)].filter(Boolean);
-  return `<li class="job ${open ? "open" : ""}" data-id="${j.id}" data-cv="${esc(j.cv)}" data-status="${esc(j.status)}">
-    <button class="job-head" data-act="toggle" aria-expanded="${open}" aria-controls="body-${j.id}">
-      <div class="score" role="img" aria-label="Puntaje ${j.score} de 100">
-        <div class="score-num">${j.score}<small>/100</small></div>${meter(j.score)}
+function tagsHtml(j) {
+  return [
+    `<span class="chip chip-cv chip-${esc(j.cv)}">${esc(cvLabel(j.cv))}</span>`,
+    STATUS_LABEL[j.status] ? `<span class="chip chip-${esc(j.status)}">${STATUS_LABEL[j.status]}</span>` : "",
+    isNew(j) ? `<span class="chip chip-nuevo">Nueva</span>` : "",
+    needsFollowUp(j) ? `<span class="chip chip-seguimiento" title="Postulaste hace ${daysSince(j.applied_at)} días">Hacer seguimiento</span>` : "",
+    isMyCompany(j.company) ? `<span class="chip chip-empresa">Mi empresa</span>` : "",
+    j.sources.length > 1 ? `<span class="chip">${j.sources.length} portales</span>` : "",
+  ].join("");
+}
+
+function cardHtml(j) {
+  const sel = state.openId === j.id;
+  const [qk, ql] = quality(j.score);
+  const sub = [j.company || "Empresa no indicada", j.location || "Lugar no indicado"].join(" · ");
+  const star = j.status === "interesa";
+  return `<li class="job ${sel ? "selected" : ""}" data-id="${j.id}" data-cv="${esc(j.cv)}" data-status="${esc(j.status)}" data-act="select" tabindex="0" role="button" aria-pressed="${sel}">
+    ${avatar(j.company)}
+    <div class="job-main">
+      <h3 class="job-title">${esc(j.title)}</h3>
+      <div class="job-sub">${esc(sub)}</div>
+      <div class="job-tags">${tagsHtml(j)}<span class="job-ago">${esc(ago(j.posted))}</span></div>
+    </div>
+    <div class="job-side">
+      <div class="qual q-${qk}" role="img" aria-label="Puntaje ${j.score} de 100, ${ql}"><b>${j.score}</b><small>${ql}</small></div>
+      <div class="quick">
+        <button class="icon-btn ${star ? "on" : ""}" data-act="status" data-status="${star ? "nueva" : "interesa"}" title="${star ? "Quitar de Me interesa" : "Me interesa"}" aria-label="Me interesa">${star ? "★" : "☆"}</button>
+        <button class="icon-btn" data-act="status" data-status="descartada" title="Descartar" aria-label="Descartar">✕</button>
       </div>
-      <div class="job-main">
-        <h3 class="job-title">${esc(j.title)}</h3>
-        <div class="job-meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</div>
-      </div>
-      <span class="chip chip-cv chip-${esc(j.cv)}">${esc(cvLabel(j.cv))}</span>
-      <span class="job-flags">
-        ${STATUS_LABEL[j.status] ? `<span class="chip chip-${esc(j.status)}">${STATUS_LABEL[j.status]}</span>` : ""}
-        ${isNew(j) ? `<span class="chip chip-nuevo">Nueva</span>` : ""}
-        ${needsFollowUp(j) ? `<span class="chip chip-seguimiento" title="Postulaste hace ${daysSince(j.applied_at)} días">Hacer seguimiento</span>` : ""}
-        ${isMyCompany(j.company) ? `<span class="chip chip-empresa">Mi empresa</span>` : ""}
-        ${j.sources.length > 1 ? `<span class="chip">${j.sources.length} portales</span>` : ""}
-        <span class="chevron" aria-hidden="true">&#9656;</span>
-      </span>
-    </button>
-    ${open ? detailHtml(j) : ""}
+    </div>
   </li>`;
 }
 
-function detailHtml(j) {
-  const best = j.cv;
+function whyHtml(data) {
+  const li = data.items
+    .map((it) => `<li><span class="pts ${it.points >= 0 ? "pos" : "neg"}">${it.points >= 0 ? "+" : "−"}${Math.abs(it.points)}</span><span>${esc(it.label)}</span></li>`)
+    .join("");
+  return `<ul class="why">${li}</ul><p class="hint">Total: ${data.total}/100 (el puntaje siempre queda entre 0 y 100).</p>`;
+}
+
+async function loadWhy(id) {
+  const box = $("why");
+  if (!box) return;
+  if (state.why[id]) {
+    box.innerHTML = whyHtml(state.why[id]);
+    return;
+  }
+  try {
+    state.why[id] = await api("/api/explain?id=" + id);
+    if (state.openId === id && $("why")) $("why").innerHTML = whyHtml(state.why[id]);
+  } catch (e) {
+    if ($("why")) $("why").innerHTML = `<p class="hint">No se pudo calcular el desglose.</p>`;
+  }
+}
+
+function renderDetail() {
+  const j = state.jobs.find((x) => x.id === state.openId);
+  const box = $("detail");
+  if (!j) {
+    box.innerHTML = detailPlaceholder();
+    return;
+  }
+  const keep = box.dataset.id === String(j.id) ? box.scrollTop : 0;
+  box.dataset.id = j.id;
+  const [qk, ql] = quality(j.score);
   const bars = Object.entries(j.cv_scores)
     .map(
-      ([k, v]) => `<div class="cv-bar ${k === best ? "best" : ""}">
+      ([k, v]) => `<div class="cv-bar ${k === j.cv ? "best" : ""}">
         <span>${esc(cvLabel(k))}</span>
         <div class="cv-bar-track"><div class="cv-bar-fill" style="width:${v}%"></div></div>
         <span>${v}</span></div>`
     )
     .join("");
+  const link = (j.sources.find((x) => x.url) || {}).url;
   const sources = j.sources
-    .map((s) => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)}</a>` : esc(s.name)}</li>`)
+    .map((x) => `<li>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.name)}</a>` : esc(x.name)}</li>`)
     .join("");
-  const btn = (status, label) =>
+  const tog = (status, on, off) =>
     j.status === status
-      ? `<button class="btn btn-sm" data-act="status" data-status="nueva">Quitar "${label}"</button>`
-      : `<button class="btn btn-sm" data-act="status" data-status="${status}">${label}</button>`;
-  return `<div class="job-body" id="body-${j.id}">
-    ${j.description ? `<p class="job-desc">${esc(j.description)}</p>` : `<p class="hint">Esta oferta no tiene descripción.</p>`}
-    <div class="detail-grid">
-      <div class="detail-block"><h4>Qué CV conviene usar</h4><div class="cv-bars">${bars}</div></div>
-      <div class="detail-block"><h4>Dónde está publicada</h4><ul class="sources">${sources}</ul></div>
+      ? `<button class="btn" data-act="status" data-status="nueva">${on}</button>`
+      : `<button class="btn" data-act="status" data-status="${status}">${off}</button>`;
+  box.innerHTML = `<article class="detail">
+    <button class="btn btn-quiet detail-back" data-act="back">← Volver a la lista</button>
+    <header class="d-head">
+      ${avatar(j.company, true)}
+      <div class="d-title">
+        <h2>${esc(j.title)}</h2>
+        <p>${esc([j.company || "Empresa no indicada", j.location || "Lugar no indicado", ago(j.posted)].filter(Boolean).join(" · "))}</p>
+        <div class="job-tags">${tagsHtml(j)}</div>
+      </div>
+      <div class="qual qual-lg q-${qk}"><b>${j.score}</b><small>${ql}</small></div>
+    </header>
+    <div class="d-actions">
+      <button class="btn btn-primary" data-act="post">Preparar postulación</button>
+      ${link ? `<a class="btn" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Abrir oferta</a>` : ""}
+      ${tog("interesa", "★ Me interesa", "☆ Me interesa")}
+      ${tog("aplicada", "✓ Aplicada", "○ Aplicada")}
+      ${j.status === "descartada" ? `<button class="btn" data-act="status" data-status="nueva">Recuperar</button>` : `<button class="btn btn-danger" data-act="status" data-status="descartada">Descartar</button>`}
     </div>
-    <div class="detail-block"><h4>Mis notas</h4>
-      <textarea class="input" data-notes rows="2" placeholder="Contacto, fecha de entrevista, lo que quieras recordar">${esc(j.notes)}</textarea></div>
-    <div class="job-actions"><button class="btn btn-sm btn-primary" data-act="post">Preparar postulación</button>${btn("interesa", "Me interesa")}${btn("aplicada", "Marcar como aplicada")}${btn("descartada", "Descartar")}</div>
-  </div>`;
+    <section class="d-sec"><h3>Por qué este puntaje</h3><div id="why"><p class="hint">Calculando…</p></div></section>
+    <section class="d-sec"><h3>Qué CV conviene usar</h3><div class="cv-bars">${bars}</div></section>
+    <section class="d-sec"><h3>Descripción</h3>${j.description ? `<p class="job-desc">${esc(j.description)}</p>` : `<p class="hint">Esta oferta no tiene descripción.</p>`}</section>
+    <section class="d-sec"><h3>Dónde está publicada</h3><ul class="sources">${sources}</ul></section>
+    <section class="d-sec"><h3>Mis notas</h3>
+      <textarea class="input" data-notes rows="3" placeholder="Contacto, fecha de entrevista, lo que quieras recordar">${esc(j.notes)}</textarea></section>
+  </article>`;
+  box.scrollTop = keep;
+  loadWhy(j.id);
 }
 
 /* ---------- acciones ---------- */
 async function setStatus(id, status) {
+  const before = visibleRows();
+  const idx = before.findIndex((j) => j.id === id);
   await api("/api/jobs/" + id, "POST", { status });
   const j = state.jobs.find((x) => x.id === id);
   if (j) j.status = status;
-  if (status === "descartada" || status === "aplicada") state.openId = null;
+  const after = visibleRows();
+  if (state.openId === id && !after.some((x) => x.id === id)) {
+    // la oferta salió de esta pestaña: pasamos a la siguiente
+    const next = before.slice(idx + 1).find((x) => after.some((y) => y.id === x.id)) || before.slice(0, idx).reverse().find((x) => after.some((y) => y.id === x.id));
+    state.openId = isMobile() ? null : next ? next.id : null;
+    if (isMobile() && history.state && history.state.detail) history.back();
+  }
   render();
 }
 
@@ -539,9 +627,8 @@ async function saveOffer(ev) {
 function clearFilters() {
   $("fQ").value = "";
   $("fLoc").value = "";
-  $("fMin").value = 0;
+  $("fMin").value = "0";
   $("fOnlyEmp").checked = false;
-  $("fMinOut").textContent = "0";
   state.cv = "";
   state.src = "";
   renderCvFilter();
@@ -553,10 +640,7 @@ function bind() {
   const reload = debounce(loadJobs);
   $("fQ").addEventListener("input", reload);
   $("fLoc").addEventListener("input", reload);
-  $("fMin").addEventListener("input", () => {
-    $("fMinOut").textContent = $("fMin").value;
-    reload();
-  });
+  $("fMin").addEventListener("change", loadJobs);
   $("fSrc").addEventListener("change", (e) => {
     state.src = e.target.value;
     render();
@@ -632,17 +716,20 @@ function bind() {
     render();
   });
 
-  $("list").addEventListener("click", (e) => {
+  const onAct = (e) => {
     const el = e.target.closest("[data-act]");
     if (!el) return;
     const li = el.closest(".job");
-    const id = li ? Number(li.dataset.id) : null;
+    const id = li ? Number(li.dataset.id) : state.openId;
     switch (el.dataset.act) {
-      case "toggle":
-        state.openId = state.openId === id ? null : id;
-        render();
+      case "select":
+        selectJob(id);
+        break;
+      case "back":
+        closeDetail();
         break;
       case "status":
+        e.stopPropagation();
         setStatus(id, el.dataset.status);
         break;
       case "post":
@@ -661,23 +748,84 @@ function bind() {
         clearFilters();
         break;
     }
+  };
+  $("list").addEventListener("click", onAct);
+  $("detail").addEventListener("click", onAct);
+  $("list").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.classList.contains("job")) selectJob(Number(e.target.dataset.id));
   });
 
   // las notas se guardan al salir del campo
-  $("list").addEventListener("focusout", async (e) => {
+  $("detail").addEventListener("focusout", async (e) => {
     if (!e.target.matches("[data-notes]")) return;
-    const id = Number(e.target.closest(".job").dataset.id);
-    const j = state.jobs.find((x) => x.id === id);
+    const j = state.jobs.find((x) => x.id === state.openId);
     if (j && j.notes !== e.target.value) {
       j.notes = e.target.value;
       try {
-        await api("/api/jobs/" + id, "POST", { notes: j.notes });
+        await api("/api/jobs/" + j.id, "POST", { notes: j.notes });
         toast("Nota guardada.");
       } catch (err) {
         toast("No se pudo guardar la nota.");
       }
     }
   });
+
+  // atajos de teclado (solo en la pantalla principal)
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector("dialog[open]")) return;
+    if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+    const rows = visibleRows();
+    const i = rows.findIndex((j) => j.id === state.openId);
+    if (e.key === "ArrowDown" || e.key === "j") {
+      e.preventDefault();
+      if (rows.length) selectJob(rows[Math.min(rows.length - 1, i + 1)].id, true);
+    } else if (e.key === "ArrowUp" || e.key === "k") {
+      e.preventDefault();
+      if (rows.length) selectJob(rows[Math.max(0, i - 1)].id, true);
+    } else if (i >= 0 && ["s", "d", "a"].includes(e.key.toLowerCase())) {
+      const want = { s: "interesa", d: "descartada", a: "aplicada" }[e.key.toLowerCase()];
+      setStatus(rows[i].id, rows[i].status === want ? "nueva" : want);
+    } else if (e.key === "Escape" && isMobile() && state.openId != null) {
+      closeDetail();
+    }
+  });
+
+  // en el celular, el botón "atrás" cierra el detalle
+  window.addEventListener("popstate", () => {
+    if (state.openId != null && isMobile()) {
+      state.openId = null;
+      render();
+    }
+  });
+  matchMedia("(max-width: 900px)").addEventListener("change", () => {
+    state.openId = null;
+    render();
+  });
+
+  // el menú "Mis empresas" se cierra al tocar afuera
+  document.addEventListener("click", (e) => {
+    const m = $("empMenu");
+    if (m.open && !m.contains(e.target)) m.open = false;
+  });
+}
+
+function selectJob(id, scroll) {
+  if (id == null) return;
+  const wasOpen = state.openId != null;
+  state.openId = id;
+  if (isMobile() && !wasOpen) history.pushState({ detail: true }, "");
+  render();
+  if (scroll) document.querySelector(`.job[data-id="${id}"]`)?.scrollIntoView({ block: "nearest" });
+  if (isMobile()) $("detail").scrollTop = 0;
+}
+
+function closeDetail() {
+  if (history.state && history.state.detail) history.back();
+  else {
+    state.openId = null;
+    render();
+  }
 }
 
 async function init() {

@@ -129,6 +129,12 @@ def list_jobs(q="", cv="", status="", min_score=0, location=""):
         return out
 
 
+def get_job(job_id):
+    with conn() as c:
+        r = c.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+    return dict(r) if r else None
+
+
 def update_job(job_id, status=None, notes=None):
     with conn() as c:
         if status is not None:

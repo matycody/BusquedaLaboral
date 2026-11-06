@@ -44,16 +44,9 @@ def score_job(job, cfg):
         loc_bonus = 10
 
     rec_bonus = experience_adjust(title, desc)
-    posted = job.get("posted")
-    if posted:
-        try:
-            d = datetime.fromisoformat(posted)
-            if d.tzinfo is None:
-                d = d.replace(tzinfo=timezone.utc)
-            days = (datetime.now(timezone.utc) - d).days
-            rec_bonus += 8 if days <= 3 else 4 if days <= 10 else 0 if days <= 21 else -8 if days <= 45 else -15
-        except ValueError:
-            pass
+    age = _age_points(job.get("posted"))
+    if age:
+        rec_bonus += age[1]
 
     comp = norm(job.get("company"))
     comp_bonus = 0
@@ -69,21 +62,72 @@ _SENIOR_TITLE = re.compile(r"\b(sr|ssr|sr\.|semi ?sr|senior|semi ?senior|lider|g
 _NO_EXP = ("sin experiencia", "no requiere experiencia", "no es necesaria experiencia", "primer empleo", "primera experiencia")
 
 
-def experience_adjust(title, desc):
-    """Penaliza lo que pide años de experiencia y premia lo abierto a primer empleo."""
-    adj = 0
+def experience_breakdown(title, desc):
+    """Lista de (motivo, puntos) por experiencia pedida y nivel del puesto."""
+    out = []
     if _SENIOR_TITLE.search(title):
-        adj -= 12
+        out.append(("Puesto de nivel senior o de mando", -12))
     years = [int(g) for m in _YEARS.finditer(desc) for g in m.groups() if g]
     years = [y for y in years if 1 <= y <= 20]
     if years:
         n = max(years)
-        adj -= 3 if n == 1 else min(24, 6 * n)
+        out.append((f"Pide {n} {'año' if n == 1 else 'años'} de experiencia", -3 if n == 1 else -min(24, 6 * n)))
     elif any(k in desc for k in _NO_EXP) or any(k in title for k in _NO_EXP):
-        adj += 6
+        out.append(("Abierto a primera experiencia", 6))
     if re.search(r"\b(trainee|pasante|junior|jr|ayudante|aprendiz|practicante)\b", title):
-        adj += 4
-    return adj
+        out.append(("Puesto de nivel inicial", 4))
+    return out
+
+
+def experience_adjust(title, desc):
+    """Penaliza lo que pide años de experiencia y premia lo abierto a primer empleo."""
+    return sum(p for _, p in experience_breakdown(title, desc))
+
+
+def _age_points(posted):
+    if not posted:
+        return None
+    try:
+        d = datetime.fromisoformat(posted)
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    days = (datetime.now(timezone.utc) - d).days
+    pts = 8 if days <= 3 else 4 if days <= 10 else 0 if days <= 21 else -8 if days <= 45 else -15
+    return days, pts
+
+
+def explain(job, cfg):
+    """Desglose del puntaje: qué sumó y qué restó. Devuelve {"items": [...], "total": n}."""
+    title = norm(job.get("title"))
+    desc = norm(job.get("description"))
+    loc = norm(job.get("location"))
+    score, best_cv, _ = score_job(job, cfg)
+    prof = cfg["profiles"][best_cv]
+    hits = [k for k in prof["keywords"] if norm(k) in title or norm(k) in desc]
+    base = round(_profile_score(prof, title, desc) * 0.82)
+    items = []
+    if hits:
+        items.append({"label": f"Coincide con {prof.get('label', best_cv)}: " + ", ".join(hits[:6]), "points": base})
+    else:
+        items.append({"label": f"Casi no coincide con las palabras de {prof.get('label', best_cv)}", "points": base})
+    oks = [norm(x) for x in cfg.get("locations_ok", [])]
+    if any(o and o in loc for o in oks) or "remoto" in loc or "remoto" in desc:
+        items.append({"label": "Lugar que te sirve o remoto", "points": 10})
+    comp = norm(job.get("company"))
+    if comp and any(norm(e.get("name")) and norm(e["name"]) in comp for e in cfg.get("empresas", [])):
+        items.append({"label": "Es una de tus empresas de interés", "points": cfg.get("company_bonus", 10)})
+    for label, pts in experience_breakdown(title, desc):
+        items.append({"label": label, "points": pts})
+    age = _age_points(job.get("posted"))
+    if age and age[1]:
+        days, pts = age
+        items.append({"label": "Publicada hace %d días" % days if days > 1 else "Publicada recién", "points": pts})
+    for word, p in cfg.get("penalize", {}).items():
+        if norm(word) in title or norm(word) in desc:
+            items.append({"label": f'Menciona "{word}"', "points": p})
+    return {"items": items, "total": score}
 
 
 def dedupe_key(job):
