@@ -126,6 +126,13 @@ textarea.input { resize: vertical; min-height: 84px; line-height: 1.45; }
 .range-row input[type=range] { flex: 1; accent-color: var(--ink); }
 .range-row output { min-width: 28px; text-align: right; font-weight: 700; }
 
+.companies { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
+.company { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 4px 8px; border-radius: var(--radius); }
+.company:hover { background: var(--line-soft); }
+.company a { color: var(--ink); text-decoration: none; font-weight: 600; }
+.company a:hover { text-decoration: underline; }
+.company .alt { font-size: 12.5px; color: var(--prog); font-weight: 500; }
+.job-flags .chip-empresa { background: #e3eadf; color: #2b5a2e; }
 .btn-clear { justify-self: start; padding-left: 0; }
 .filters-toggle { display: none; }
 

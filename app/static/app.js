@@ -53,6 +53,27 @@ const debounce = (fn, ms = 250) => {
   };
 };
 
+/* ---------- empresas de interés ---------- */
+const isMyCompany = (name) => {
+  const n = norm(name || "");
+  return !!n && (state.cfg?.empresas || []).some((e) => norm(e.name) && n.includes(norm(e.name)));
+};
+const norm = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+function renderCompanies() {
+  const list = state.cfg.empresas || [];
+  $("companies").innerHTML = list.length
+    ? list
+        .map((e) => {
+          const main = e.url || "https://www.google.com/search?q=" + encodeURIComponent(e.name + " trabajá con nosotros");
+          const li = "https://www.linkedin.com/jobs/search/?keywords=" + encodeURIComponent(e.name);
+          return `<li class="company"><a href="${esc(main)}" target="_blank" rel="noopener noreferrer" title="${e.url ? "Página de empleos" : "Buscar su página de empleos"}">${esc(e.name)}</a>
+            <a class="alt" href="${esc(li)}" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>`;
+        })
+        .join("")
+    : `<li class="hint">Agregalas en Configuración.</li>`;
+}
+
 /* ---------- carga y filtros ---------- */
 async function loadJobs() {
   const p = new URLSearchParams({
@@ -71,7 +92,7 @@ async function loadJobs() {
 }
 
 function filtersActive() {
-  return !!($("fQ").value.trim() || $("fLoc").value.trim() || state.cv || Number($("fMin").value));
+  return !!($("fOnlyEmp").checked || $("fQ").value.trim() || $("fLoc").value.trim() || state.cv || Number($("fMin").value));
 }
 
 function renderCvFilter() {
@@ -97,7 +118,8 @@ function render() {
     return `<button class="tab" role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${label}<span class="tab-count">${n}</span></button>`;
   }).join("");
 
-  const rows = state.jobs.filter((j) => inTab(j, state.tab));
+  const onlyEmp = $("fOnlyEmp").checked;
+  const rows = state.jobs.filter((j) => inTab(j, state.tab) && (!onlyEmp || isMyCompany(j.company)));
   rows.sort((a, b) =>
     state.sort === "recent"
       ? String(b.posted || b.created).localeCompare(String(a.posted || a.created))
@@ -160,6 +182,7 @@ function jobHtml(j) {
       <span class="chip chip-cv chip-${esc(j.cv)}">${esc(cvLabel(j.cv))}</span>
       <span class="job-flags">
         ${STATUS_LABEL[j.status] ? `<span class="chip chip-${esc(j.status)}">${STATUS_LABEL[j.status]}</span>` : ""}
+        ${isMyCompany(j.company) ? `<span class="chip chip-empresa">Mi empresa</span>` : ""}
         ${j.sources.length > 1 ? `<span class="chip">${j.sources.length} portales</span>` : ""}
         <span class="chevron" aria-hidden="true">&#9656;</span>
       </span>
@@ -224,11 +247,13 @@ async function doSearch() {
   await runBusy($("btnSearch"), "Buscando…", async () => {
     const r = await api("/api/search", "POST");
     if (r.aviso) {
-      toast("Todavía no hay fuentes cargadas. Agregá feeds RSS en Configuración.");
+      toast(r.aviso);
     } else {
-      const errs = r.errores?.length ? ` ${r.errores.length} fuente(s) fallaron.` : "";
-      toast(`${r.agregadas} ofertas nuevas.${errs}`);
-      if (r.errores?.length) console.warn(r.errores);
+      const vacias = (r.empresas || []).filter((x) => !x.encontradas);
+      const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
+      const emp = vacias.length ? ` Sin resultados legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde el panel Mis empresas.` : "";
+      toast(`${r.agregadas} ofertas nuevas.${errs}${emp}`);
+      console.info("Revisión de empresas", r.empresas, r.errores);
     }
     await loadJobs();
   });
@@ -264,6 +289,7 @@ function openConfig() {
   $("cLocation").value = c.location || "";
   $("cLocs").value = (c.locations_ok || []).join("\n");
   $("cRss").value = (c.rss_feeds || []).join("\n");
+  $("cEmp").value = (c.empresas || []).map((e) => (e.url ? `${e.name} | ${e.url}` : e.name)).join("\n");
   $("cPen").value = objToLines(c.penalize || {});
   $("cProfiles").innerHTML = Object.entries(c.profiles)
     .map(
@@ -281,6 +307,10 @@ async function saveConfig(ev) {
   cfg.location = $("cLocation").value.trim();
   cfg.locations_ok = textToList($("cLocs").value);
   cfg.rss_feeds = textToList($("cRss").value);
+  cfg.empresas = textToList($("cEmp").value).map((l) => {
+    const [name, ...rest] = l.split("|");
+    return { name: name.trim(), url: rest.join("|").trim() };
+  }).filter((e) => e.name);
   cfg.penalize = linesToObj($("cPen").value);
   document.querySelectorAll("[data-profile]").forEach((ta) => {
     cfg.profiles[ta.dataset.profile].keywords = linesToObj(ta.value);
@@ -290,6 +320,7 @@ async function saveConfig(ev) {
     state.cfg = cfg;
     $("dConfig").close();
     toast("Configuración guardada. Puntajes recalculados.");
+    renderCompanies();
     await loadJobs();
   } catch (e) {
     toast("No se pudo guardar: " + e.message);
@@ -322,6 +353,7 @@ function clearFilters() {
   $("fQ").value = "";
   $("fLoc").value = "";
   $("fMin").value = 0;
+  $("fOnlyEmp").checked = false;
   $("fMinOut").textContent = "0";
   state.cv = "";
   renderCvFilter();
@@ -341,6 +373,7 @@ function bind() {
     state.cv = e.target.value;
     loadJobs();
   });
+  $("fOnlyEmp").addEventListener("change", render);
   $("fSort").addEventListener("change", (e) => {
     state.sort = e.target.value;
     render();
@@ -442,6 +475,7 @@ async function init() {
     return;
   }
   renderCvFilter();
+  renderCompanies();
   bind();
   loadJobs();
 }

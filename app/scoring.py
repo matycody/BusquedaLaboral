@@ -55,7 +55,12 @@ def score_job(job, cfg):
         except ValueError:
             pass
 
-    score = max(0, min(100, round(base * 0.82 + loc_bonus + rec_bonus + pen)))
+    comp = norm(job.get("company"))
+    comp_bonus = 0
+    if comp and any(norm(e.get("name")) and norm(e["name"]) in comp for e in cfg.get("empresas", [])):
+        comp_bonus = cfg.get("company_bonus", 10)
+
+    score = max(0, min(100, round(base * 0.82 + loc_bonus + rec_bonus + comp_bonus + pen)))
     return score, best_cv, {k: round(v) for k, v in per_cv.items()}
 
 

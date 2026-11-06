@@ -53,6 +53,11 @@
         <output id="fMinOut" for="fMin">0</output>
       </div>
     </div>
+    <div class="field">
+      <span class="label" id="empLabel">Mis empresas</span>
+      <label class="seg-option"><input type="checkbox" id="fOnlyEmp"> Mostrar solo estas empresas</label>
+      <ul class="companies" id="companies" aria-labelledby="empLabel"></ul>
+    </div>
     <button class="btn btn-quiet btn-clear" id="btnClear">Limpiar filtros</button>
   </aside>
 
@@ -104,6 +109,13 @@
         <label for="cLocs">Lugares que me sirven</label>
         <textarea class="input" id="cLocs" rows="4"></textarea>
         <p class="hint">Uno por línea. Las ofertas en estos lugares, o remotas, suman puntos.</p>
+      </div>
+
+      <h3 class="section-title">Empresas de interés</h3>
+      <div class="field">
+        <label for="cEmp">Empresas</label>
+        <textarea class="input" id="cEmp" rows="5" placeholder="Coto | https://www.coto.com.ar/empleos/"></textarea>
+        <p class="hint">Una por línea: <b>Nombre | link de su página de empleos</b> (el link es opcional). Sus ofertas suman puntos y Buscar ofertas revisa los links.</p>
       </div>
 
       <h3 class="section-title">Fuentes</h3>

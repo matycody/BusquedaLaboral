@@ -31,7 +31,14 @@ DEFAULT = {
         },
     },
     "penalize": {"senior": -15, "semi senior": -8, "ssr": -8, "lider": -10, "gerente": -20, "5 años": -12, "3 años": -6},
-    "companies": [],
+    "empresas": [
+        {"name": "Genrod", "url": ""},
+        {"name": "Edesur", "url": ""},
+        {"name": "Coto", "url": "https://www.coto.com.ar/empleos/"},
+        {"name": "Mercado Libre", "url": "https://careers-meli.mercadolibre.com/"},
+        {"name": "Ualá", "url": "https://www.uala.com.ar/sumate"},
+    ],
+    "company_bonus": 10,
     "rss_feeds": [],
 }
 
