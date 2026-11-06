@@ -25,6 +25,12 @@ def conn():
             created TEXT
         )"""
     )
+    cols = [r[1] for r in c.execute("PRAGMA table_info(jobs)")]
+    if "applied_at" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN applied_at TEXT")
+        # las ya marcadas como aplicadas cuentan desde hoy
+        c.execute("UPDATE jobs SET applied_at=? WHERE status='aplicada'", (datetime.now(timezone.utc).isoformat(),))
+        c.commit()
     return c
 
 
@@ -127,6 +133,11 @@ def update_job(job_id, status=None, notes=None):
     with conn() as c:
         if status is not None:
             c.execute("UPDATE jobs SET status=? WHERE id=?", (status, job_id))
+            if status == "aplicada":
+                c.execute("UPDATE jobs SET applied_at=? WHERE id=? AND applied_at IS NULL",
+                          (datetime.now(timezone.utc).isoformat(), job_id))
+            else:
+                c.execute("UPDATE jobs SET applied_at=NULL WHERE id=?", (job_id,))
         if notes is not None:
             c.execute("UPDATE jobs SET notes=? WHERE id=?", (notes, job_id))
     return {"ok": True}

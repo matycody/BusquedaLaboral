@@ -133,6 +133,7 @@ textarea.input { resize: vertical; min-height: 84px; line-height: 1.45; }
 .company a:hover { text-decoration: underline; }
 .company .alt { font-size: 12.5px; color: var(--prog); font-weight: 500; }
 .job-flags .chip-nuevo { background: var(--ink); color: #fff; }
+.job-flags .chip-seguimiento { background: #fff3d6; color: #7a4b00; border-color: #e8c16a; }
 .job-flags .chip-empresa { background: #e3eadf; color: #2b5a2e; }
 .btn-clear { justify-self: start; padding-left: 0; }
 .filters-toggle { display: none; }

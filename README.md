@@ -15,6 +15,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 ## Qué hace hoy
 
 - **Ofertas de ejemplo**: en Configuración → Datos (o desde la pantalla vacía) cargás ofertas de prueba, con duplicados entre portales para ver el agrupado.
+- **Avisos**: cuando aparece una oferta nueva con puntaje alto (80 por defecto) te avisa en pantalla y, si lo permitís, con una notificación del navegador. Las postulaciones sin novedades después de unos días (7 por defecto) se marcan con "Hacer seguimiento". Ambos valores se cambian en ⚙ Configuración → Avisos.
 - **Buscar ofertas**: lee Computrabajo, Bumeran, ZonaJobs y BuscoJobs (puestos y zona configurables), las páginas de tus empresas, tus alertas de Gmail y los feeds RSS cargados en ⚙ Configuración.
 - **+ Agregar oferta**: pegás un aviso a mano (sirve para cualquier portal).
 - **Alertas por Gmail**: lee (solo lectura) los mails de alertas de los portales y los suma a la lista. Hace falta una contraseña de aplicación de Google (verificación en 2 pasos + myaccount.google.com/apppasswords). Se guarda en `data/secrets.json`, que no se sube a GitHub; también podés usar la variable de entorno `GMAIL_APP_PASSWORD`. Después creá alertas de empleo en cada portal con ese mismo mail.

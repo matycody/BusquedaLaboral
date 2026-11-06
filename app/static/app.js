@@ -82,6 +82,22 @@ function renderCompanies() {
 }
 
 /* ---------- carga y filtros ---------- */
+function checkAlerts() {
+  const key = "maxJobIdSeen";
+  const maxId = state.jobs.reduce((m, j) => Math.max(m, j.id), 0);
+  let seen = null;
+  try { seen = localStorage.getItem(key); } catch (e) { /* sin storage */ }
+  try { localStorage.setItem(key, String(Math.max(maxId, Number(seen) || 0))); } catch (e) { /* sin storage */ }
+  if (seen === null) return; // primera vez: no avisamos de todo lo que ya había
+  const min = ((state.cfg || {}).avisos || {}).puntaje || 80;
+  const hot = state.jobs.filter((j) => j.id > Number(seen) && j.score >= min && j.status === "nueva");
+  if (!hot.length) return;
+  const best = hot.reduce((a, b) => (b.score > a.score ? b : a));
+  const text = hot.length === 1 ? `Nueva oferta de ${best.score}/100: ${best.title}` : `${hot.length} ofertas nuevas de ${min}+ puntos. La mejor: ${best.title} (${best.score})`;
+  setTimeout(() => toast(text), 4300); // después del aviso de la búsqueda
+  if ("Notification" in window && Notification.permission === "granted") new Notification("Búsqueda laboral", { body: text });
+}
+
 async function loadJobs() {
   const p = new URLSearchParams({
     q: $("fQ").value.trim(),
@@ -96,6 +112,7 @@ async function loadJobs() {
     state.jobs = [];
   }
   render();
+  checkAlerts();
 }
 
 function filtersActive() {
@@ -139,7 +156,11 @@ function render() {
     $("list").innerHTML = `<li>${emptyState()}</li>`;
     return;
   }
-  $("list").innerHTML = rows.map(jobHtml).join("");
+  const due = state.tab === "aplicada" ? rows.filter(needsFollowUp).length : 0;
+  const banner = due
+    ? `<li><div class="empty" style="padding:12px 16px;text-align:left"><strong>${due === 1 ? "1 postulación lleva" : due + " postulaciones llevan"} varios días sin novedades.</strong> Escribile a la empresa para preguntar cómo sigue.</div></li>`
+    : "";
+  $("list").innerHTML = banner + rows.map(jobHtml).join("");
 }
 
 function emptyState() {
@@ -174,6 +195,15 @@ function meter(score) {
 
 const STATUS_LABEL = { interesa: "Me interesa", aplicada: "Aplicada", descartada: "Descartada" };
 
+function daysSince(iso) {
+  return iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : 0;
+}
+
+function needsFollowUp(j) {
+  const days = ((state.cfg || {}).avisos || {}).seguimiento_dias || 7;
+  return j.status === "aplicada" && !!j.applied_at && daysSince(j.applied_at) >= days;
+}
+
 function jobHtml(j) {
   const open = state.openId === j.id;
   const meta = [j.company || "Empresa no indicada", j.location || "Lugar no indicado", ago(j.posted)].filter(Boolean);
@@ -190,6 +220,7 @@ function jobHtml(j) {
       <span class="job-flags">
         ${STATUS_LABEL[j.status] ? `<span class="chip chip-${esc(j.status)}">${STATUS_LABEL[j.status]}</span>` : ""}
         ${isNew(j) ? `<span class="chip chip-nuevo">Nueva</span>` : ""}
+        ${needsFollowUp(j) ? `<span class="chip chip-seguimiento" title="Postulaste hace ${daysSince(j.applied_at)} días">Hacer seguimiento</span>` : ""}
         ${isMyCompany(j.company) ? `<span class="chip chip-empresa">Mi empresa</span>` : ""}
         ${j.sources.length > 1 ? `<span class="chip">${j.sources.length} portales</span>` : ""}
         <span class="chevron" aria-hidden="true">&#9656;</span>
@@ -253,6 +284,7 @@ async function runBusy(btn, busyText, fn) {
 
 async function doSearch() {
   await runBusy($("btnSearch"), "Buscando…", async () => {
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
     const r = await api("/api/search", "POST");
     if (r.aviso) {
       toast(r.aviso);
@@ -371,6 +403,9 @@ function openConfig() {
   const auto = c.auto || {};
   $("cAutoOn").checked = !!auto.enabled;
   $("cAutoH").value = auto.every_hours || 6;
+  const av = c.avisos || {};
+  $("cAvScore").value = av.puntaje || 80;
+  $("cAvDays").value = av.seguimiento_dias || 7;
   const post = c.postulacion || {};
   $("cPName").value = post.nombre || "";
   $("cPPhone").value = post.telefono || "";
@@ -435,6 +470,7 @@ async function saveConfig(ev) {
   document.querySelectorAll("[data-profile]").forEach((ta) => {
     cfg.profiles[ta.dataset.profile].keywords = linesToObj(ta.value);
   });
+  cfg.avisos = { puntaje: Math.min(100, Math.max(30, Number($("cAvScore").value) || 80)), seguimiento_dias: Math.min(60, Math.max(1, Number($("cAvDays").value) || 7)) };
   cfg.auto = { enabled: $("cAutoOn").checked, every_hours: Math.min(48, Math.max(1, Number($("cAutoH").value) || 6)) };
   cfg.postulacion = { ...(cfg.postulacion || {}), nombre: $("cPName").value.trim(), telefono: $("cPPhone").value.trim(), plantillas: { ...((cfg.postulacion || {}).plantillas || {}) } };
   document.querySelectorAll("[data-tpl]").forEach((ta) => { cfg.postulacion.plantillas[ta.dataset.tpl] = ta.value; });
