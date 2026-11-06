@@ -53,6 +53,8 @@ const debounce = (fn, ms = 250) => {
   };
 };
 
+const isNew = (j) => j.status === "nueva" && j.created && Date.now() - new Date(j.created).getTime() < 86400000;
+
 /* ---------- empresas de interés ---------- */
 const isMyCompany = (name) => {
   const n = norm(name || "");
@@ -182,6 +184,7 @@ function jobHtml(j) {
       <span class="chip chip-cv chip-${esc(j.cv)}">${esc(cvLabel(j.cv))}</span>
       <span class="job-flags">
         ${STATUS_LABEL[j.status] ? `<span class="chip chip-${esc(j.status)}">${STATUS_LABEL[j.status]}</span>` : ""}
+        ${isNew(j) ? `<span class="chip chip-nuevo">Nueva</span>` : ""}
         ${isMyCompany(j.company) ? `<span class="chip chip-empresa">Mi empresa</span>` : ""}
         ${j.sources.length > 1 ? `<span class="chip">${j.sources.length} portales</span>` : ""}
         <span class="chevron" aria-hidden="true">&#9656;</span>
@@ -216,7 +219,7 @@ function detailHtml(j) {
     </div>
     <div class="detail-block"><h4>Mis notas</h4>
       <textarea class="input" data-notes rows="2" placeholder="Contacto, fecha de entrevista, lo que quieras recordar">${esc(j.notes)}</textarea></div>
-    <div class="job-actions">${btn("interesa", "Me interesa")}${btn("aplicada", "Marcar como aplicada")}${btn("descartada", "Descartar")}</div>
+    <div class="job-actions"><button class="btn btn-sm btn-primary" data-act="post">Preparar postulación</button>${btn("interesa", "Me interesa")}${btn("aplicada", "Marcar como aplicada")}${btn("descartada", "Descartar")}</div>
   </div>`;
 }
 
@@ -260,6 +263,7 @@ async function doSearch() {
       console.info("Revisión", { empresas: r.empresas, portales: r.portales, gmail: r.gmail, errores: r.errores });
     }
     await loadJobs();
+    refreshStatus();
   });
 }
 
@@ -267,6 +271,46 @@ async function loadDemo() {
   const r = await api("/api/demo", "POST");
   toast(`${r.agregadas} ofertas de ejemplo cargadas.`);
   await loadJobs();
+}
+
+/* ---------- postulación asistida ---------- */
+let postJob = null;
+function fill(tpl, vars) {
+  return String(tpl || "").replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+}
+function openPost(id) {
+  const j = state.jobs.find((x) => x.id === id);
+  if (!j) return;
+  postJob = j;
+  const post = state.cfg.postulacion || {};
+  const tpls = post.plantillas || {};
+  const tpl = tpls[j.cv] ?? Object.values(tpls)[0] ?? "Hola, me postulo para el puesto de {puesto}.\n\nSaludos,\n{nombre}";
+  const vars = { puesto: j.title, empresa: j.company && j.company !== "Confidencial" ? j.company : "su empresa", cv: cvLabel(j.cv), nombre: post.nombre || "", telefono: post.telefono || "" };
+  $("postInfo").textContent = `Usá el ${cvLabel(j.cv)} para esta oferta (puntaje ${j.score}).` + (post.nombre ? "" : " Completá tu nombre en Configuración → Postulación para que salga en el mensaje.");
+  $("pSubject").value = `Postulación: ${j.title}`;
+  $("pBody").value = fill(tpl, vars).replace(/\n{3,}/g, "\n\n").trim();
+  $("pOpen").disabled = !(j.sources[0] && j.sources[0].url);
+  $("dPost").showModal();
+}
+
+async function refreshStatus(reload) {
+  try {
+    const st = await api("/api/status");
+    if (!st.last_search) {
+      $("lastSearch").textContent = "Todavía no se buscó.";
+    } else {
+      const mins = Math.round((Date.now() / 1000 - st.last_search) / 60);
+      const when = mins < 1 ? "recién" : mins < 60 ? `hace ${mins} min` : mins < 1440 ? `hace ${Math.round(mins / 60)} h` : `hace ${Math.round(mins / 1440)} d`;
+      $("lastSearch").textContent = `Última búsqueda ${when}.`;
+    }
+    if (reload && st.last_search !== state.lastSearch) {
+      state.lastSearch = st.last_search;
+      if (reload === "changed") await loadJobs();
+    }
+    state.lastSearch = st.last_search;
+  } catch (e) {
+    /* sin conexión con el servidor: no mostramos nada */
+  }
 }
 
 /* ---------- diálogos ---------- */
@@ -309,6 +353,16 @@ function openConfig() {
   $("cCtRegion").value = ct.region || "buenos-aires-gba";
   $("cCtPages").value = ct.max_pages || 2;
   $("cCtQ").value = (ct.queries || []).join("\n");
+  const auto = c.auto || {};
+  $("cAutoOn").checked = !!auto.enabled;
+  $("cAutoH").value = auto.every_hours || 6;
+  const post = c.postulacion || {};
+  $("cPName").value = post.nombre || "";
+  $("cPPhone").value = post.telefono || "";
+  $("cPTemplates").innerHTML = Object.entries(c.profiles)
+    .map(([k, p]) => `<div class="field"><label for="tpl-${esc(k)}">Mensaje para ${esc(p.label)}</label>
+      <textarea class="input" id="tpl-${esc(k)}" data-tpl="${esc(k)}" rows="7">${esc((post.plantillas || {})[k] || "")}</textarea></div>`)
+    .join("");
   const gm = c.gmail || {};
   $("cGmOn").checked = !!gm.enabled;
   $("cGmEmail").value = gm.email || "";
@@ -362,6 +416,9 @@ async function saveConfig(ev) {
   document.querySelectorAll("[data-profile]").forEach((ta) => {
     cfg.profiles[ta.dataset.profile].keywords = linesToObj(ta.value);
   });
+  cfg.auto = { enabled: $("cAutoOn").checked, every_hours: Math.min(48, Math.max(1, Number($("cAutoH").value) || 6)) };
+  cfg.postulacion = { ...(cfg.postulacion || {}), nombre: $("cPName").value.trim(), telefono: $("cPPhone").value.trim(), plantillas: { ...((cfg.postulacion || {}).plantillas || {}) } };
+  document.querySelectorAll("[data-tpl]").forEach((ta) => { cfg.postulacion.plantillas[ta.dataset.tpl] = ta.value; });
   cfg.gmail = {
     enabled: $("cGmOn").checked,
     email: $("cGmEmail").value.trim(),
@@ -447,6 +504,24 @@ function bind() {
   });
   $("btnConfig").addEventListener("click", openConfig);
   $("formAdd").addEventListener("submit", saveOffer);
+  $("pCopy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("pBody").value); toast("Mensaje copiado."); }
+    catch (e) { $("pBody").select(); toast("Seleccioné el texto: copialo con Ctrl+C."); }
+  });
+  $("pGmail").addEventListener("click", () => {
+    const q = new URLSearchParams({ view: "cm", fs: "1", su: $("pSubject").value, body: $("pBody").value });
+    window.open("https://mail.google.com/mail/?" + q.toString(), "_blank", "noopener");
+  });
+  $("pOpen").addEventListener("click", () => {
+    const u = postJob?.sources[0]?.url;
+    if (u) window.open(u, "_blank", "noopener");
+  });
+  $("pApplied").addEventListener("click", async () => {
+    if (!postJob) return;
+    await setStatus(postJob.id, "aplicada");
+    $("dPost").close();
+    toast("Marcada como aplicada.");
+  });
   $("formConfig").addEventListener("submit", saveConfig);
 
   document.querySelectorAll("[data-close]").forEach((b) =>
@@ -490,6 +565,9 @@ function bind() {
       case "status":
         setStatus(id, el.dataset.status);
         break;
+      case "post":
+        openPost(id);
+        break;
       case "demo":
         loadDemo();
         break;
@@ -532,6 +610,8 @@ async function init() {
   renderCvFilter();
   renderCompanies();
   bind();
-  loadJobs();
+  await loadJobs();
+  await refreshStatus(true);
+  setInterval(() => refreshStatus("changed"), 60000);
 }
 init();

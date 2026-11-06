@@ -17,7 +17,7 @@ def fetch():
         ("Analista de datos Jr", "Consultora Datos", "CABA", "SQL, Python y Excel. Ciencia de datos, tableros de BI.", 5, "LinkedIn"),
         ("Desarrollador Full Stack Senior", "TechCorp", "CABA", "Más de 5 años de experiencia con JavaScript, Python y SQL. Liderazgo de equipo.", 1, "Indeed"),
         ("Gerente de mantenimiento", "Planta Norte", "Rosario, Santa Fe", "Gerencia de mantenimiento industrial. 10 años de experiencia.", 6, "Bumeran"),
-        ("Soporte técnico IT", "Redes y Más", "Claypole, Buenos Aires", "Soporte a usuarios, armado de PCs, redes básicas. Pasante o junior.", 1, "Mi Empleo"),
+        ("Soporte técnico IT", "Redes y Más", "Quilmes, Buenos Aires", "Soporte a usuarios, armado de PCs, redes básicas. Pasante o junior.", 1, "Mi Empleo"),
         ("Electricista de obra", "Constructora Delta", "Lomas de Zamora, Buenos Aires", "Instalaciones eléctricas domiciliarias y de obra. Baja tensión.", 8, "Portal Empleo"),
         ("Operario de producción", "Alimentos del Sur", "Burzaco, Buenos Aires", "Línea de producción, turnos rotativos.", 2, "Jobsora"),
     ]

@@ -7,8 +7,8 @@ DATA_DIR = os.path.join(BASE, "data")
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
 
 DEFAULT = {
-    "location": "Claypole, Buenos Aires",
-    "locations_ok": ["claypole", "almirante brown", "lomas de zamora", "quilmes", "caba", "capital federal", "remoto"],
+    "location": "",
+    "locations_ok": ["capital federal", "caba", "buenos aires", "remoto"],
     "min_score": 0,
     "profiles": {
         "electricidad": {
@@ -39,7 +39,24 @@ DEFAULT = {
         {"name": "Ualá", "url": "https://www.ua.la/sumate"},
     ],
     "company_bonus": 10,
-    "gmail": {"enabled": False, "email": "matiassosa045@gmail.com", "days": 7,
+    "auto": {"enabled": False, "every_hours": 6},
+    "postulacion": {
+        "nombre": "",
+        "telefono": "",
+        "plantillas": {
+            "electricidad": (
+                "Hola, buenos días.\n\nMe postulo para el puesto de {puesto} en {empresa}. "
+                "Busco mi primera experiencia laboral en el rubro eléctrico y tengo muchas ganas de aprender y sumarme al equipo.\n\n"
+                "Adjunto mi CV ({cv}). Quedo a disposición para una entrevista.\n\nSaludos,\n{nombre}\n{telefono}"
+            ),
+            "programacion": (
+                "Hola, buenos días.\n\nMe postulo para el puesto de {puesto} en {empresa}. "
+                "Estoy estudiando programación y busco mi primera experiencia laboral para seguir creciendo.\n\n"
+                "Adjunto mi CV ({cv}) con mis proyectos. Quedo a disposición para una entrevista.\n\nSaludos,\n{nombre}\n{telefono}"
+            ),
+        },
+    },
+    "gmail": {"enabled": False, "email": "", "days": 7,
               "senders": ["computrabajo", "bumeran", "linkedin", "indeed", "zonajobs", "jooble", "workana", "glassdoor"]},
     "portales": {
         "computrabajo": {

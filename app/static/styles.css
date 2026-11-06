@@ -132,6 +132,7 @@ textarea.input { resize: vertical; min-height: 84px; line-height: 1.45; }
 .company a { color: var(--ink); text-decoration: none; font-weight: 600; }
 .company a:hover { text-decoration: underline; }
 .company .alt { font-size: 12.5px; color: var(--prog); font-weight: 500; }
+.job-flags .chip-nuevo { background: var(--ink); color: #fff; }
 .job-flags .chip-empresa { background: #e3eadf; color: #2b5a2e; }
 .btn-clear { justify-self: start; padding-left: 0; }
 .filters-toggle { display: none; }
@@ -158,7 +159,7 @@ textarea.input { resize: vertical; min-height: 84px; line-height: 1.45; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
 }
-.toolbar-count { color: var(--ink-2); font-size: 14px; }
+.toolbar-count { color: var(--ink-2); font-size: 14px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
 .toolbar .input { width: auto; padding: 5px 8px; }
 
 .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }

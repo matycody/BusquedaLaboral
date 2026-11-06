@@ -18,6 +18,8 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 - **Buscar ofertas**: lee Computrabajo y Bumeran (puestos y zona configurables), las páginas de tus empresas, tus alertas de Gmail y los feeds RSS cargados en ⚙ Configuración.
 - **+ Agregar oferta**: pegás un aviso a mano (sirve para cualquier portal).
 - **Alertas por Gmail**: lee (solo lectura) los mails de alertas de los portales y los suma a la lista. Hace falta una contraseña de aplicación de Google (verificación en 2 pasos + myaccount.google.com/apppasswords). Se guarda en `data/secrets.json`, que no se sube a GitHub; también podés usar la variable de entorno `GMAIL_APP_PASSWORD`. Después creá alertas de empleo en cada portal con ese mismo mail.
+- **Búsqueda automática**: en Configuración elegís cada cuántas horas busca sola (mientras el programa esté abierto). Las ofertas de las últimas 24 h llevan la etiqueta "Nueva" y la lista se actualiza sola.
+- **Preparar postulación**: en el detalle de cada oferta arma el asunto y el mensaje con el CV recomendado. Podés copiarlo, abrirlo en Gmail, abrir la oferta y marcarla como aplicada. No envía nada por vos. Tu nombre, teléfono y las plantillas se editan en Configuración → Postulación y quedan en `data/`, que no se sube a GitHub.
 - **Mis empresas** (Genrod, Edesur, Coto, Mercado Libre, Ualá): panel con link a su página de empleos o búsqueda en LinkedIn; sus ofertas suman +10 puntos, llevan la etiqueta "Mi empresa" y se pueden filtrar. Si cargás el link de empleos, **Buscar ofertas** lo revisa. Mercado Libre (puestos de Argentina) y Ualá tienen lector propio; las demás usan un lector genérico que solo ve lo que está en el HTML, y si una página sale vacía se avisa.
 - **Filtros**: texto, lugar, CV recomendado, estado, puntaje mínimo.
 - **Estados**: me interesa / apliqué / descartada.
@@ -35,6 +37,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 run.py                  arranca el servidor
 app/server.py           servidor y API (sin dependencias)
 app/scoring.py          puntaje y recomendación de CV
+app/search.py           búsqueda completa y planificador automático
 app/db.py               base SQLite + agrupado de duplicados
 app/config.py           configuración (data/config.json)
 app/sources/demo.py     ofertas de ejemplo

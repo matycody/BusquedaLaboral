@@ -3,11 +3,12 @@ import json
 import mimetypes
 import os
 import re
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db
-from .sources import bumeran, companies, computrabajo, demo, gmail, rss
+from . import config, db, search
+from .sources import demo
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
@@ -42,6 +43,9 @@ class Handler(BaseHTTPRequestHandler):
                 min_score=int(q.get("min_score") or 0), location=q.get("location", "")))
         if u.path == "/api/config":
             return self._json(config.load())
+        if u.path == "/api/status":
+            st = search.load_state()
+            return self._json({"last_search": st.get("last_search"), "last_added": st.get("last_added", 0)})
         if u.path == "/api/gmail/status":
             return self._json({"password_set": bool(config.get_secret("gmail_password", "GMAIL_APP_PASSWORD"))})
         # archivos estáticos
@@ -64,37 +68,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/demo":
             return self._json(db.upsert_jobs(demo.fetch()))
         if u.path == "/api/search":
-            cfg = config.load()
-            feeds = cfg.get("rss_feeds", [])
-            con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
-            portales = cfg.get("portales", {})
-            activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran))
-                       if portales.get(name.lower(), {}).get("enabled") and portales.get(name.lower(), {}).get("queries")]
-            gm = cfg.get("gmail", {})
-            gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")
-            use_gm = bool(gm.get("enabled") and gm.get("email") and gm_pass)
-            if not feeds and not con_url and not activos and not use_gm:
-                return self._json({"agregadas": 0, "errores": [], "empresas": [], "portales": [],
-                                   "aviso": "No hay fuentes cargadas. Activá un portal, agregá feeds RSS o empresas con link en Configuración."})
-            jobs, errors = rss.fetch(feeds) if feeds else ([], [])
-            cjobs, report = companies.fetch(cfg)
-            pjobs, preport = [], []
-            for name, mod in activos:
-                got, rep = mod.fetch(portales[name.lower()])
-                pjobs += got
-                preport += [{**r, "portal": name} for r in rep]
-            gjobs, greport = [], []
-            if use_gm:
-                try:
-                    gjobs, greport = gmail.fetch(gm, gm_pass)
-                except Exception as e:
-                    greport = [{"correo": "", "encontradas": 0, "nota": f"No se pudo leer Gmail: {e}"}]
-            res = db.upsert_jobs(jobs + cjobs + pjobs + gjobs)
-            res["gmail"] = greport
-            res["errores"] = errors
-            res["empresas"] = report
-            res["portales"] = preport
-            return self._json(res)
+            res = search.run_search()
+            return self._json(res if res is not None else {"agregadas": 0, "aviso": "Ya hay una búsqueda en curso. Esperá a que termine."})
         if u.path == "/api/gmail/password":
             config.set_secret("gmail_password", "".join(str(body.get("password", "")).split()))
             return self._json({"password_set": bool(config.get_secret("gmail_password"))})
@@ -119,6 +94,8 @@ class Handler(BaseHTTPRequestHandler):
 def run(host="127.0.0.1", port=8000):
     config.load()
     db.conn().close()
+    stop = threading.Event()
+    threading.Thread(target=search.scheduler_loop, args=(stop,), daemon=True).start()
     srv = ThreadingHTTPServer((host, port), Handler)
     print(f"Buscador de empleo listo en http://{host}:{port}  (Ctrl+C para cortar)")
     try:

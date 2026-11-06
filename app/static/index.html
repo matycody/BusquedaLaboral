@@ -64,7 +64,7 @@
   <main class="results">
     <div class="tabs" role="tablist" id="tabs"></div>
     <div class="toolbar">
-      <span class="toolbar-count" id="count" aria-live="polite"></span>
+      <span class="toolbar-count"><span id="count" aria-live="polite"></span><span class="hint" id="lastSearch"></span></span>
       <label>Ordenar por
         <select class="input" id="fSort">
           <option value="score">Mejor puntaje</option>
@@ -141,6 +141,18 @@
         <p class="hint">Uno por línea. Bumeran busca en todo el país, así que solo se guardan las ofertas cuyo lugar contiene alguna de las zonas.</p>
       </div>
 
+      <h3 class="section-title">Búsqueda automática</h3>
+      <label class="seg-option"><input type="checkbox" id="cAutoOn"> Buscar sola mientras el programa esté abierto</label>
+      <div class="field" style="max-width:240px"><label for="cAutoH">Cada cuántas horas</label><input class="input" id="cAutoH" type="number" min="1" max="48"></div>
+
+      <h3 class="section-title">Postulación</h3>
+      <div class="cols-2">
+        <div class="field"><label for="cPName">Mi nombre completo</label><input class="input" id="cPName" autocomplete="off"></div>
+        <div class="field"><label for="cPPhone">Teléfono (opcional)</label><input class="input" id="cPPhone" autocomplete="off"></div>
+      </div>
+      <div id="cPTemplates" class="dlg-body" style="padding:0;overflow:visible;max-height:none"></div>
+      <p class="hint">Variables disponibles: {puesto}, {empresa}, {cv}, {nombre}, {telefono}. Tus datos quedan en la carpeta data de tu PC.</p>
+
       <h3 class="section-title">Alertas por Gmail</h3>
       <label class="seg-option"><input type="checkbox" id="cGmOn"> Leer las alertas de empleo de mi Gmail</label>
       <div class="cols-2">
@@ -188,6 +200,29 @@
       <div class="group">
         <button type="button" class="btn" data-close>Cancelar</button>
         <button type="submit" class="btn btn-primary">Guardar y recalcular</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dPost">
+  <form method="dialog" id="formPost">
+    <div class="dlg-head"><h2>Preparar postulación</h2></div>
+    <div class="dlg-body">
+      <p class="hint" id="postInfo"></p>
+      <div class="field"><label for="pSubject">Asunto</label><input class="input" id="pSubject"></div>
+      <div class="field"><label for="pBody">Mensaje</label><textarea class="input" id="pBody" rows="12"></textarea>
+        <p class="hint">Revisalo y adjuntá el CV indicado. Cambiá las plantillas en Configuración → Postulación.</p></div>
+    </div>
+    <div class="dlg-foot">
+      <div class="group">
+        <button type="button" class="btn" id="pCopy">Copiar mensaje</button>
+        <button type="button" class="btn" id="pGmail">Abrir en Gmail</button>
+        <button type="button" class="btn" id="pOpen">Abrir la oferta</button>
+      </div>
+      <div class="group">
+        <button type="button" class="btn" data-close>Cerrar</button>
+        <button type="button" class="btn btn-primary" id="pApplied">Ya postulé</button>
       </div>
     </div>
   </form>
