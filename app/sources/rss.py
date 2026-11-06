@@ -2,9 +2,9 @@
 import re
 import urllib.request
 import xml.etree.ElementTree as ET
+from .http import page_headers
 from email.utils import parsedate_to_datetime
 
-UA = {"User-Agent": "Mozilla/5.0 (BusquedaLaboral personal)"}
 
 
 def _text(el, *names):
@@ -16,7 +16,7 @@ def _text(el, *names):
 
 
 def fetch_feed(url, timeout=15):
-    req = urllib.request.Request(url, headers=UA)
+    req = urllib.request.Request(url, headers=page_headers())
     with urllib.request.urlopen(req, timeout=timeout) as r:
         root = ET.fromstring(r.read())
     ns = "{http://www.w3.org/2005/Atom}"

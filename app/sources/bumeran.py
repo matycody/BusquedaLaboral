@@ -11,15 +11,10 @@ import urllib.request
 from datetime import datetime, timezone
 
 from ..scoring import norm
+from .http import api_headers, explain
 
 BASE = "https://www.bumeran.com.ar"
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (BusquedaLaboral personal)",
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "x-site-id": "BMAR",
-    "Origin": BASE,
-}
+HEADERS = {**api_headers(BASE), "x-site-id": "BMAR"}
 
 
 def _slug(text):
@@ -71,7 +66,7 @@ def fetch(conf, pause=1.0):
             try:
                 data = _search(q, page)
             except Exception as e:
-                note = f"No se pudo leer: {e}"
+                note = f"No se pudo leer: {explain(e)}"
                 break
             items = data.get("content", [])
             for a in items:

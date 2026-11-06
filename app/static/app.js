@@ -252,14 +252,23 @@ async function doSearch() {
     if (r.aviso) {
       toast(r.aviso);
     } else {
-      const vacias = (r.empresas || []).filter((x) => !x.encontradas);
-      const fallas = (r.portales || []).filter((x) => x.nota);
-      const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
-      const emp = vacias.length ? ` Sin resultados legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde el panel Mis empresas.` : "";
+      // un solo mensaje por portal que falló, con el motivo
+      const porPortal = {};
+      (r.portales || []).forEach((x) => {
+        const p = (porPortal[x.portal] ||= { total: 0, fallas: 0, motivo: "" });
+        p.total += 1;
+        if (x.nota) { p.fallas += 1; p.motivo ||= x.nota.replace(/^No se pudo leer: /, ""); }
+      });
+      const por = Object.entries(porPortal)
+        .filter(([, p]) => p.fallas)
+        .map(([n, p]) => ` ${n}: ${p.fallas} de ${p.total} búsquedas fallaron (${p.motivo}).`)
+        .join("");
       const gfalla = (r.gmail || []).find((x) => x.nota);
       const gm = gfalla ? ` ${gfalla.nota}` : r.gmail?.length ? ` ${r.gmail.length} mail(s) de alertas leídos.` : "";
-      const por = fallas.length ? ` ${fallas[0].portal} falló en ${fallas.length} búsqueda(s): ${fallas[0].nota}` : "";
-      toast(`${r.agregadas} ofertas nuevas.${errs}${por}${gm}${emp}`);
+      const vacias = (r.empresas || []).filter((x) => !x.encontradas);
+      const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
+      const emp = vacias.length ? ` Sin puestos legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde Mis empresas.` : "";
+      toast(`${r.agregadas} ofertas nuevas.${por}${gm}${errs}${emp}`);
       console.info("Revisión", { empresas: r.empresas, portales: r.portales, gmail: r.gmail, errores: r.errores });
     }
     await loadJobs();

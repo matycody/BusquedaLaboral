@@ -9,9 +9,9 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 from ..scoring import norm
+from .http import explain, page_headers
 
 BASE = "https://ar.computrabajo.com"
-UA = {"User-Agent": "Mozilla/5.0 (BusquedaLaboral personal)", "Accept-Language": "es-AR,es;q=0.9"}
 
 
 def _slug(text):
@@ -66,7 +66,7 @@ def parse_page(page_html):
 
 
 def _get(url, timeout=20):
-    req = urllib.request.Request(url, headers=UA)
+    req = urllib.request.Request(url, headers=page_headers(BASE + "/"))
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read(3_000_000).decode(r.headers.get_content_charset() or "utf-8", "replace")
 
@@ -85,7 +85,7 @@ def fetch(conf, pause=1.0):
             try:
                 got = parse_page(_get(url))
             except Exception as e:
-                note = f"No se pudo leer: {e}"
+                note = f"No se pudo leer: {explain(e)}"
                 break
             jobs += got
             found += len(got)

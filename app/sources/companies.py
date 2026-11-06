@@ -15,8 +15,8 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 
 from ..scoring import norm
+from .http import explain, page_headers
 
-UA = {"User-Agent": "Mozilla/5.0 (BusquedaLaboral personal)"}
 
 
 class _Links(HTMLParser):
@@ -42,7 +42,7 @@ class _Links(HTMLParser):
 
 
 def _check_one(empresa, keywords, timeout=15):
-    req = urllib.request.Request(empresa["url"], headers=UA)
+    req = urllib.request.Request(empresa["url"], headers=page_headers())
     with urllib.request.urlopen(req, timeout=timeout) as r:
         html = r.read(2_000_000).decode(r.headers.get_content_charset() or "utf-8", "replace")
     parser = _Links()
@@ -64,7 +64,7 @@ def _check_one(empresa, keywords, timeout=15):
 
 
 def _get(url, timeout=20, limit=3_000_000):
-    req = urllib.request.Request(url, headers=UA)
+    req = urllib.request.Request(url, headers=page_headers())
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read(limit).decode(r.headers.get_content_charset() or "utf-8", "replace")
 
@@ -160,5 +160,5 @@ def fetch(cfg):
             report.append({"empresa": e["name"], "encontradas": len(found),
                            "nota": "" if found else "No se leyeron puestos (la página probablemente carga con JavaScript o no hay ninguno que coincida). Abrila desde el link."})
         except Exception as ex:
-            report.append({"empresa": e["name"], "encontradas": 0, "nota": f"No se pudo abrir: {ex}"})
+            report.append({"empresa": e["name"], "encontradas": 0, "nota": f"No se pudo abrir: {explain(ex)}"})
     return jobs, report
