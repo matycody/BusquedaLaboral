@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buscador de empleo</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --muted:#6b7684; --line:#e3e7ec; --accent:#1f6feb; --ok:#1a7f4b; --mid:#b7791f; --low:#8a94a3; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--card); border-bottom:1px solid var(--line); padding:14px 20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+  h1 { font-size:18px; margin:0; }
+  main { max-width:1000px; margin:0 auto; padding:16px; }
+  button { font:inherit; padding:7px 12px; border:1px solid var(--line); background:var(--card); border-radius:7px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  input, select, textarea { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .bar input[type=search] { flex:1; min-width:180px; }
+  .job { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:10px; display:flex; gap:14px; }
+  .score { flex:none; width:54px; height:54px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:18px; color:#fff; background:var(--low); }
+  .score.hi { background:var(--ok); } .score.mid { background:var(--mid); }
+  .info { flex:1; min-width:0; }
+  .info h3 { margin:0 0 2px; font-size:16px; }
+  .meta { color:var(--muted); font-size:13px; }
+  .tags { margin:6px 0; display:flex; flex-wrap:wrap; gap:6px; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:99px; background:#eef2f7; }
+  .tag.cv { background:#e5efff; color:#134aa8; }
+  .desc { font-size:13.5px; color:#3a4452; margin:6px 0; }
+  .actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .actions a { font-size:13px; color:var(--accent); }
+  .status-aplicada { opacity:.75; } .status-descartada { opacity:.45; }
+  dialog { border:1px solid var(--line); border-radius:12px; padding:18px; max-width:620px; width:92%; }
+  dialog label { display:block; margin:10px 0 3px; font-weight:600; font-size:13px; }
+  dialog input, dialog textarea { width:100%; }
+  textarea { min-height:90px; font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+  #msg { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#1c2430; color:#fff; padding:9px 16px; border-radius:8px; display:none; max-width:90%; }
+  .empty { text-align:center; color:var(--muted); padding:40px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔎 Buscador de empleo</h1>
+  <div class="bar" style="margin:0">
+    <button class="primary" onclick="buscar()">Buscar ofertas</button>
+    <button onclick="demo()">Cargar demo</button>
+    <button onclick="recalcular()">Recalcular puntajes</button>
+    <button onclick="abrirManual()">+ Agregar oferta</button>
+    <button onclick="abrirConfig()">⚙ Configuración</button>
+  </div>
+</header>
+<main>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Buscar por puesto, empresa o texto…" oninput="debounce()">
+    <input id="loc" placeholder="Lugar (ej: Quilmes)" oninput="debounce()" style="width:160px">
+    <select id="cv" onchange="cargar()"><option value="">Todos los CV</option></select>
+    <select id="status" onchange="cargar()">
+      <option value="">Todos los estados</option><option value="nueva">Nuevas</option>
+      <option value="interesa">Me interesa</option><option value="aplicada">Aplicadas</option><option value="descartada">Descartadas</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px">Puntaje mín.
+      <input type="number" id="min" value="0" min="0" max="100" style="width:70px" onchange="cargar()"></label>
+  </div>
+  <div id="count" class="meta" style="margin-bottom:8px"></div>
+  <div id="list"></div>
+</main>
+
+<dialog id="dManual">
+  <h3>Agregar oferta manualmente</h3>
+  <label>Puesto *</label><input id="m_title">
+  <label>Empresa</label><input id="m_company">
+  <label>Lugar</label><input id="m_location">
+  <label>Link</label><input id="m_url">
+  <label>Descripción (pegá el aviso)</label><textarea id="m_desc"></textarea>
+  <p style="text-align:right"><button onclick="document.getElementById('dManual').close()">Cancelar</button>
+  <button class="primary" onclick="guardarManual()">Guardar</button></p>
+</dialog>
+
+<dialog id="dConfig">
+  <h3>Configuración</h3>
+  <label>Mi ubicación</label><input id="c_location">
+  <label>Lugares que me sirven (uno por línea; suman puntos)</label><textarea id="c_locs"></textarea>
+  <label>Fuentes RSS de empleo (una URL por línea)</label><textarea id="c_rss" placeholder="https://…/feed.xml"></textarea>
+  <label>Palabras clave por CV (JSON: palabra → peso)</label><textarea id="c_profiles" style="min-height:200px"></textarea>
+  <label>Penalizaciones (JSON: palabra → puntos negativos)</label><textarea id="c_pen"></textarea>
+  <p style="text-align:right"><button onclick="document.getElementById('dConfig').close()">Cancelar</button>
+  <button onclick="borrarTodo()">Vaciar ofertas</button>
+  <button class="primary" onclick="guardarConfig()">Guardar y recalcular</button></p>
+</dialog>
+<div id="msg"></div>
+
+<script>
+let CFG = null, timer;
+const $ = id => document.getElementById(id);
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function debounce(){ clearTimeout(timer); timer = setTimeout(cargar, 250); }
+function toast(t){ const m=$('msg'); m.textContent=t; m.style.display='block'; setTimeout(()=>m.style.display='none',3500); }
+async function api(path, method='GET', body){
+  const r = await fetch(path, {method, headers:{'Content-Type':'application/json'}, body: body?JSON.stringify(body):undefined});
+  return r.json();
+}
+async function init(){
+  CFG = await api('/api/config');
+  const sel = $('cv');
+  for (const [k,p] of Object.entries(CFG.profiles)) sel.add(new Option(p.label, k));
+  cargar();
+}
+async function cargar(){
+  const p = new URLSearchParams({q:$('q').value, location:$('loc').value, cv:$('cv').value, status:$('status').value, min_score:$('min').value||0});
+  const jobs = await api('/api/jobs?'+p);
+  $('count').textContent = jobs.length + ' oferta' + (jobs.length===1?'':'s');
+  $('list').innerHTML = jobs.length ? jobs.map(card).join('') :
+    '<div class="empty">No hay ofertas. Probá <b>Cargar demo</b> o <b>Buscar ofertas</b> (necesita fuentes RSS en Configuración).</div>';
+}
+function card(j){
+  const cls = j.score>=60?'hi':j.score>=35?'mid':'';
+  const cvName = (CFG.profiles[j.cv]||{}).label || j.cv;
+  const srcs = j.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)).join(' · ');
+  const posted = j.posted ? new Date(j.posted).toLocaleDateString('es-AR') : '';
+  return `<div class="job status-${j.status}">
+    <div class="score ${cls}" title="Puntaje 0-100">${j.score}</div>
+    <div class="info">
+      <h3>${esc(j.title)}</h3>
+      <div class="meta">${esc(j.company||'Empresa no indicada')} · ${esc(j.location||'Lugar no indicado')}${posted?' · '+posted:''}</div>
+      <div class="tags"><span class="tag cv">Usar: ${esc(cvName)}</span>
+        ${Object.entries(j.cv_scores).map(([k,v])=>`<span class="tag">${esc((CFG.profiles[k]||{}).label||k)}: ${v}</span>`).join('')}
+        ${j.sources.length>1?`<span class="tag">${j.sources.length} fuentes</span>`:''}
+        ${j.status!=='nueva'?`<span class="tag">${esc(j.status)}</span>`:''}</div>
+      <div class="desc">${esc((j.description||'').slice(0,240))}${(j.description||'').length>240?'…':''}</div>
+      <div class="actions">
+        <span class="meta">Fuentes: ${srcs}</span>
+        <button onclick="estado(${j.id},'interesa')">⭐ Me interesa</button>
+        <button onclick="estado(${j.id},'aplicada')">✅ Apliqué</button>
+        <button onclick="estado(${j.id},'descartada')">🗑 Descartar</button>
+      </div>
+    </div></div>`;
+}
+async function estado(id, status){ await api('/api/jobs/'+id,'POST',{status}); cargar(); }
+async function demo(){ const r=await api('/api/demo','POST'); toast(`Demo: ${r.agregadas} nuevas, ${r.fuentes_nuevas_en_existentes} fuentes sumadas a duplicados`); cargar(); }
+async function buscar(){
+  toast('Buscando…'); const r=await api('/api/search','POST');
+  toast(r.aviso || `${r.agregadas} nuevas${r.errores&&r.errores.length?' · '+r.errores.length+' fuente(s) con error':''}`);
+  if (r.errores && r.errores.length) console.warn(r.errores);
+  cargar();
+}
+async function recalcular(){ const r=await api('/api/recalc','POST'); toast(r.recalculadas+' ofertas recalculadas'); cargar(); }
+function abrirManual(){ ['title','company','location','url','desc'].forEach(k=>$('m_'+k).value=''); $('dManual').showModal(); }
+async function guardarManual(){
+  const body={title:$('m_title').value.trim(),company:$('m_company').value,location:$('m_location').value,url:$('m_url').value,description:$('m_desc').value,posted:new Date().toISOString()};
+  const r=await api('/api/jobs','POST',body);
+  if(r.error){ toast(r.error); return; }
+  $('dManual').close(); cargar();
+}
+function abrirConfig(){
+  $('c_location').value=CFG.location;
+  $('c_locs').value=CFG.locations_ok.join('\n');
+  $('c_rss').value=(CFG.rss_feeds||[]).join('\n');
+  $('c_profiles').value=JSON.stringify(CFG.profiles,null,2);
+  $('c_pen').value=JSON.stringify(CFG.penalize,null,2);
+  $('dConfig').showModal();
+}
+async function guardarConfig(){
+  let profiles, pen;
+  try { profiles=JSON.parse($('c_profiles').value); pen=JSON.parse($('c_pen').value); }
+  catch(e){ toast('JSON inválido: '+e.message); return; }
+  const lines = id => $(id).value.split('\n').map(s=>s.trim()).filter(Boolean);
+  CFG = {...CFG, location:$('c_location').value, locations_ok:lines('c_locs'), rss_feeds:lines('c_rss'), profiles, penalize:pen};
+  await api('/api/config','POST',CFG);
+  $('dConfig').close(); toast('Configuración guardada'); cargar();
+}
+async function borrarTodo(){ if(confirm('¿Borrar todas las ofertas guardadas?')){ await api('/api/clear','POST'); $('dConfig').close(); cargar(); } }
+init();
+</script>
+</body>
+</html>
