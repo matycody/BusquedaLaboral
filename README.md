@@ -29,7 +29,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 
 1. Se compara cada oferta con las palabras clave de cada CV (en el título pesa el doble que en la descripción).
 2. Gana el CV con más coincidencia: ese es el recomendado.
-3. Se suman bonos por lugar (te sirve / remoto) y por ser reciente, y se restan penalizaciones.
+3. Se suman bonos por lugar (te sirve / remoto), por ser reciente y por ser abierta a primer empleo (junior, pasante, "sin experiencia"). Se restan penalizaciones por puestos senior o "SR/SSR", por pedir años de experiencia (más años, más resta) y por llevar mucho tiempo publicada.
 
 ## Estructura
 

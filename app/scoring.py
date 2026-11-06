@@ -43,7 +43,7 @@ def score_job(job, cfg):
     if any(o and o in loc for o in oks) or "remoto" in loc or "remoto" in desc:
         loc_bonus = 10
 
-    rec_bonus = 0
+    rec_bonus = experience_adjust(title, desc)
     posted = job.get("posted")
     if posted:
         try:
@@ -51,7 +51,7 @@ def score_job(job, cfg):
             if d.tzinfo is None:
                 d = d.replace(tzinfo=timezone.utc)
             days = (datetime.now(timezone.utc) - d).days
-            rec_bonus = 8 if days <= 3 else 4 if days <= 10 else 0
+            rec_bonus += 8 if days <= 3 else 4 if days <= 10 else 0 if days <= 21 else -8 if days <= 45 else -15
         except ValueError:
             pass
 
@@ -62,6 +62,28 @@ def score_job(job, cfg):
 
     score = max(0, min(100, round(base * 0.82 + loc_bonus + rec_bonus + comp_bonus + pen)))
     return score, best_cv, {k: round(v) for k, v in per_cv.items()}
+
+
+_YEARS = re.compile(r"(\d+)\s*\+?\s*anos?[^.\n]{0,30}experiencia|experiencia[^.\n]{0,40}?(\d+)\s*\+?\s*anos?")
+_SENIOR_TITLE = re.compile(r"\b(sr|ssr|sr\.|semi ?sr|senior|semi ?senior|lider|gerente|jefe|coordinador|encargado)\b")
+_NO_EXP = ("sin experiencia", "no requiere experiencia", "no es necesaria experiencia", "primer empleo", "primera experiencia")
+
+
+def experience_adjust(title, desc):
+    """Penaliza lo que pide años de experiencia y premia lo abierto a primer empleo."""
+    adj = 0
+    if _SENIOR_TITLE.search(title):
+        adj -= 12
+    years = [int(g) for m in _YEARS.finditer(desc) for g in m.groups() if g]
+    years = [y for y in years if 1 <= y <= 20]
+    if years:
+        n = max(years)
+        adj -= 3 if n == 1 else min(24, 6 * n)
+    elif any(k in desc for k in _NO_EXP) or any(k in title for k in _NO_EXP):
+        adj += 6
+    if re.search(r"\b(trainee|pasante|junior|jr|ayudante|aprendiz|practicante)\b", title):
+        adj += 4
+    return adj
 
 
 def dedupe_key(job):

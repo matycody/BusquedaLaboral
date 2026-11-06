@@ -53,7 +53,12 @@ const debounce = (fn, ms = 250) => {
   };
 };
 
-const isNew = (j) => j.status === "nueva" && j.created && Date.now() - new Date(j.created).getTime() < 86400000;
+// "Nueva" = publicada en los últimos 2 días (o, sin fecha de publicación, cargada en las últimas 24 h).
+const isNew = (j) => {
+  if (j.status !== "nueva") return false;
+  const t = new Date(j.posted || j.created).getTime();
+  return !isNaN(t) && Date.now() - t < (j.posted ? 2 : 1) * 86400000;
+};
 
 /* ---------- empresas de interés ---------- */
 const isMyCompany = (name) => {
