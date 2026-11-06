@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import config, db
-from .sources import bumeran, companies, computrabajo, demo, rss
+from .sources import bumeran, companies, computrabajo, demo, gmail, rss
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
@@ -42,6 +42,8 @@ class Handler(BaseHTTPRequestHandler):
                 min_score=int(q.get("min_score") or 0), location=q.get("location", "")))
         if u.path == "/api/config":
             return self._json(config.load())
+        if u.path == "/api/gmail/status":
+            return self._json({"password_set": bool(config.get_secret("gmail_password", "GMAIL_APP_PASSWORD"))})
         # archivos estáticos
         rel = "index.html" if u.path in ("/", "") else u.path.lstrip("/")
         full = os.path.normpath(os.path.join(STATIC, rel))
@@ -68,7 +70,10 @@ class Handler(BaseHTTPRequestHandler):
             portales = cfg.get("portales", {})
             activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran))
                        if portales.get(name.lower(), {}).get("enabled") and portales.get(name.lower(), {}).get("queries")]
-            if not feeds and not con_url and not activos:
+            gm = cfg.get("gmail", {})
+            gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")
+            use_gm = bool(gm.get("enabled") and gm.get("email") and gm_pass)
+            if not feeds and not con_url and not activos and not use_gm:
                 return self._json({"agregadas": 0, "errores": [], "empresas": [], "portales": [],
                                    "aviso": "No hay fuentes cargadas. Activá un portal, agregá feeds RSS o empresas con link en Configuración."})
             jobs, errors = rss.fetch(feeds) if feeds else ([], [])
@@ -78,11 +83,21 @@ class Handler(BaseHTTPRequestHandler):
                 got, rep = mod.fetch(portales[name.lower()])
                 pjobs += got
                 preport += [{**r, "portal": name} for r in rep]
-            res = db.upsert_jobs(jobs + cjobs + pjobs)
+            gjobs, greport = [], []
+            if use_gm:
+                try:
+                    gjobs, greport = gmail.fetch(gm, gm_pass)
+                except Exception as e:
+                    greport = [{"correo": "", "encontradas": 0, "nota": f"No se pudo leer Gmail: {e}"}]
+            res = db.upsert_jobs(jobs + cjobs + pjobs + gjobs)
+            res["gmail"] = greport
             res["errores"] = errors
             res["empresas"] = report
             res["portales"] = preport
             return self._json(res)
+        if u.path == "/api/gmail/password":
+            config.set_secret("gmail_password", "".join(str(body.get("password", "")).split()))
+            return self._json({"password_set": bool(config.get_secret("gmail_password"))})
         if u.path == "/api/recalc":
             return self._json(db.recalc())
         if u.path == "/api/clear":

@@ -253,9 +253,11 @@ async function doSearch() {
       const fallas = (r.portales || []).filter((x) => x.nota);
       const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
       const emp = vacias.length ? ` Sin resultados legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde el panel Mis empresas.` : "";
+      const gfalla = (r.gmail || []).find((x) => x.nota);
+      const gm = gfalla ? ` ${gfalla.nota}` : r.gmail?.length ? ` ${r.gmail.length} mail(s) de alertas leídos.` : "";
       const por = fallas.length ? ` ${fallas[0].portal} falló en ${fallas.length} búsqueda(s): ${fallas[0].nota}` : "";
-      toast(`${r.agregadas} ofertas nuevas.${errs}${por}${emp}`);
-      console.info("Revisión", { empresas: r.empresas, portales: r.portales, errores: r.errores });
+      toast(`${r.agregadas} ofertas nuevas.${errs}${por}${gm}${emp}`);
+      console.info("Revisión", { empresas: r.empresas, portales: r.portales, gmail: r.gmail, errores: r.errores });
     }
     await loadJobs();
   });
@@ -286,6 +288,17 @@ function linesToObj(text) {
 const objToLines = (o) => Object.entries(o).map(([k, v]) => `${k}: ${v}`).join("\n");
 const textToList = (t) => t.split("\n").map((s) => s.trim()).filter(Boolean);
 
+async function refreshGmailHint() {
+  try {
+    const st = await api("/api/gmail/status");
+    $("gmPassHint").textContent = st.password_set
+      ? "Hay una contraseña guardada en esta PC. Escribí otra solo si querés cambiarla."
+      : "Todavía no hay contraseña guardada. Se guarda solo en esta PC, en la carpeta data.";
+  } catch (e) {
+    $("gmPassHint").textContent = "";
+  }
+}
+
 function openConfig() {
   const c = state.cfg;
   $("cLocation").value = c.location || "";
@@ -296,6 +309,13 @@ function openConfig() {
   $("cCtRegion").value = ct.region || "buenos-aires-gba";
   $("cCtPages").value = ct.max_pages || 2;
   $("cCtQ").value = (ct.queries || []).join("\n");
+  const gm = c.gmail || {};
+  $("cGmOn").checked = !!gm.enabled;
+  $("cGmEmail").value = gm.email || "";
+  $("cGmDays").value = gm.days || 7;
+  $("cGmSenders").value = (gm.senders || []).join("\n");
+  $("cGmPass").value = "";
+  refreshGmailHint();
   const bu = (c.portales || {}).bumeran || {};
   $("cBuOn").checked = !!bu.enabled;
   $("cBuPages").value = bu.max_pages || 2;
@@ -342,7 +362,15 @@ async function saveConfig(ev) {
   document.querySelectorAll("[data-profile]").forEach((ta) => {
     cfg.profiles[ta.dataset.profile].keywords = linesToObj(ta.value);
   });
+  cfg.gmail = {
+    enabled: $("cGmOn").checked,
+    email: $("cGmEmail").value.trim(),
+    days: Math.min(60, Math.max(1, Number($("cGmDays").value) || 7)),
+    senders: textToList($("cGmSenders").value),
+  };
   try {
+    if ($("cGmPass").value.trim()) await api("/api/gmail/password", "POST", { password: $("cGmPass").value });
+    $("cGmPass").value = "";
     await api("/api/config", "POST", cfg);
     state.cfg = cfg;
     $("dConfig").close();

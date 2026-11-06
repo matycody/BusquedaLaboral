@@ -39,6 +39,8 @@ DEFAULT = {
         {"name": "Ualá", "url": "https://www.ua.la/sumate"},
     ],
     "company_bonus": 10,
+    "gmail": {"enabled": False, "email": "matiassosa045@gmail.com", "days": 7,
+              "senders": ["computrabajo", "bumeran", "linkedin", "indeed", "zonajobs", "jooble", "workana", "glassdoor"]},
     "portales": {
         "computrabajo": {
             "enabled": True,
@@ -75,3 +77,36 @@ def save(cfg):
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+
+SECRETS_PATH = os.path.join(DATA_DIR, "secrets.json")
+
+
+def get_secret(name, env=None):
+    """Primero la variable de entorno (si se indica), después data/secrets.json."""
+    if env and os.environ.get(env):
+        return os.environ[env]
+    try:
+        with open(SECRETS_PATH, encoding="utf-8") as f:
+            return json.load(f).get(name, "")
+    except (OSError, ValueError):
+        return ""
+
+
+def set_secret(name, value):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        with open(SECRETS_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        data = {}
+    if value:
+        data[name] = value
+    else:
+        data.pop(name, None)
+    with open(SECRETS_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+    try:
+        os.chmod(SECRETS_PATH, 0o600)
+    except OSError:
+        pass

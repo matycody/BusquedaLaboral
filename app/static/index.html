@@ -141,6 +141,24 @@
         <p class="hint">Uno por línea. Bumeran busca en todo el país, así que solo se guardan las ofertas cuyo lugar contiene alguna de las zonas.</p>
       </div>
 
+      <h3 class="section-title">Alertas por Gmail</h3>
+      <label class="seg-option"><input type="checkbox" id="cGmOn"> Leer las alertas de empleo de mi Gmail</label>
+      <div class="cols-2">
+        <div class="field"><label for="cGmEmail">Cuenta de Gmail</label><input class="input" id="cGmEmail" type="email" autocomplete="off"></div>
+        <div class="field"><label for="cGmDays">Mails de los últimos (días)</label><input class="input" id="cGmDays" type="number" min="1" max="60"></div>
+      </div>
+      <div class="field">
+        <label for="cGmPass">Contraseña de aplicación</label>
+        <input class="input" id="cGmPass" type="password" autocomplete="new-password" placeholder="16 letras, la creás en tu cuenta de Google">
+        <p class="hint" id="gmPassHint"></p>
+      </div>
+      <div class="field">
+        <label for="cGmSenders">Portales que me escriben</label>
+        <textarea class="input" id="cGmSenders" rows="3"></textarea>
+        <p class="hint">Una palabra por línea, tal como aparece en el remitente (ej: computrabajo). Solo se leen mails de estos remitentes, en modo lectura: no se marca ni se borra nada.</p>
+      </div>
+      <p class="hint">Cómo se arma: 1) En Google, activá la verificación en 2 pasos. 2) Entrá a myaccount.google.com/apppasswords y creá una contraseña. 3) Pegala acá. 4) En cada portal creá alertas de empleo con este mismo mail.</p>
+
       <h3 class="section-title">Fuentes</h3>
       <div class="field">
         <label for="cRss">Feeds RSS de empleo</label>

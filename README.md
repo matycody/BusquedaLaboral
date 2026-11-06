@@ -15,8 +15,9 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 ## Qué hace hoy
 
 - **Ofertas de ejemplo**: en Configuración → Datos (o desde la pantalla vacía) cargás ofertas de prueba, con duplicados entre portales para ver el agrupado.
-- **Buscar ofertas**: lee Computrabajo y Bumeran (puestos y zona configurables), las páginas de tus empresas y los feeds RSS cargados en ⚙ Configuración.
+- **Buscar ofertas**: lee Computrabajo y Bumeran (puestos y zona configurables), las páginas de tus empresas, tus alertas de Gmail y los feeds RSS cargados en ⚙ Configuración.
 - **+ Agregar oferta**: pegás un aviso a mano (sirve para cualquier portal).
+- **Alertas por Gmail**: lee (solo lectura) los mails de alertas de los portales y los suma a la lista. Hace falta una contraseña de aplicación de Google (verificación en 2 pasos + myaccount.google.com/apppasswords). Se guarda en `data/secrets.json`, que no se sube a GitHub; también podés usar la variable de entorno `GMAIL_APP_PASSWORD`. Después creá alertas de empleo en cada portal con ese mismo mail.
 - **Mis empresas** (Genrod, Edesur, Coto, Mercado Libre, Ualá): panel con link a su página de empleos o búsqueda en LinkedIn; sus ofertas suman +10 puntos, llevan la etiqueta "Mi empresa" y se pueden filtrar. Si cargás el link de empleos, **Buscar ofertas** lo revisa. Mercado Libre (puestos de Argentina) y Ualá tienen lector propio; las demás usan un lector genérico que solo ve lo que está en el HTML, y si una página sale vacía se avisa.
 - **Filtros**: texto, lugar, CV recomendado, estado, puntaje mínimo.
 - **Estados**: me interesa / apliqué / descartada.
@@ -39,6 +40,7 @@ app/config.py           configuración (data/config.json)
 app/sources/demo.py     ofertas de ejemplo
 app/sources/companies.py  lectores de las páginas de empleo (Mercado Libre, Ualá y genérico)
 app/sources/computrabajo.py  lector de Computrabajo Argentina
+app/sources/gmail.py         alertas de empleo desde Gmail (IMAP, solo lectura)
 app/sources/bumeran.py       lector de Bumeran Argentina (API interna de su sitio)
 app/sources/rss.py      lector genérico de feeds RSS/Atom
 app/static/index.html   estructura de la página
@@ -50,4 +52,3 @@ data/                   tu base y configuración (NO se sube a GitHub)
 ## Pendiente / próximos pasos
 
 - Más portales (Indeed, LinkedIn, etc.): cada portal tiene sus reglas y bloquea scrapers, así que se agregan de a una en `app/sources/`.
-- Alertas por Gmail.
