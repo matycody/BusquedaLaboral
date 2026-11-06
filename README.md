@@ -14,7 +14,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 
 ## Qué hace hoy
 
-- **Cargar demo**: carga ofertas de ejemplo para probar (incluye duplicados entre portales para ver el agrupado).
+- **Ofertas de ejemplo**: en Configuración → Datos (o desde la pantalla vacía) cargás ofertas de prueba, con duplicados entre portales para ver el agrupado.
 - **Buscar ofertas**: lee las fuentes RSS cargadas en ⚙ Configuración.
 - **+ Agregar oferta**: pegás un aviso a mano (sirve para cualquier portal).
 - **Filtros**: texto, lugar, CV recomendado, estado, puntaje mínimo.
@@ -37,7 +37,9 @@ app/db.py               base SQLite + agrupado de duplicados
 app/config.py           configuración (data/config.json)
 app/sources/demo.py     ofertas de ejemplo
 app/sources/rss.py      lector genérico de feeds RSS/Atom
-app/static/index.html   la página web
+app/static/index.html   estructura de la página
+app/static/styles.css   estilos
+app/static/app.js       lógica de la página
 data/                   tu base y configuración (NO se sube a GitHub)
 ```
 
