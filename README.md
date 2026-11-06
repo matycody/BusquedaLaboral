@@ -17,7 +17,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 - **Ofertas de ejemplo**: en Configuración → Datos (o desde la pantalla vacía) cargás ofertas de prueba, con duplicados entre portales para ver el agrupado.
 - **Buscar ofertas**: lee las fuentes RSS cargadas en ⚙ Configuración.
 - **+ Agregar oferta**: pegás un aviso a mano (sirve para cualquier portal).
-- **Mis empresas** (Genrod, Edesur, Coto, Mercado Libre, Ualá): panel con link a su página de empleos o búsqueda en LinkedIn; sus ofertas suman +10 puntos, llevan la etiqueta "Mi empresa" y se pueden filtrar. Si cargás el link de empleos, **Buscar ofertas** lo revisa y trae los puestos que se leen en el HTML (las páginas que cargan con JavaScript pueden salir vacías; en ese caso se avisa).
+- **Mis empresas** (Genrod, Edesur, Coto, Mercado Libre, Ualá): panel con link a su página de empleos o búsqueda en LinkedIn; sus ofertas suman +10 puntos, llevan la etiqueta "Mi empresa" y se pueden filtrar. Si cargás el link de empleos, **Buscar ofertas** lo revisa. Mercado Libre (puestos de Argentina) y Ualá tienen lector propio; las demás usan un lector genérico que solo ve lo que está en el HTML, y si una página sale vacía se avisa.
 - **Filtros**: texto, lugar, CV recomendado, estado, puntaje mínimo.
 - **Estados**: me interesa / apliqué / descartada.
 - **Configuración**: lugares que te sirven, palabras clave y pesos por CV, penalizaciones (senior, gerente, "5 años"…). Al guardar se recalculan todos los puntajes.
@@ -37,7 +37,7 @@ app/scoring.py          puntaje y recomendación de CV
 app/db.py               base SQLite + agrupado de duplicados
 app/config.py           configuración (data/config.json)
 app/sources/demo.py     ofertas de ejemplo
-app/sources/companies.py  revisa las páginas de empleo de tus empresas
+app/sources/companies.py  lectores de las páginas de empleo (Mercado Libre, Ualá y genérico)
 app/sources/rss.py      lector genérico de feeds RSS/Atom
 app/static/index.html   estructura de la página
 app/static/styles.css   estilos

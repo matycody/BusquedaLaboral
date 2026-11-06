@@ -36,7 +36,7 @@ DEFAULT = {
         {"name": "Edesur", "url": ""},
         {"name": "Coto", "url": "https://www.coto.com.ar/empleos/"},
         {"name": "Mercado Libre", "url": "https://careers-meli.mercadolibre.com/"},
-        {"name": "Ualá", "url": "https://www.uala.com.ar/sumate"},
+        {"name": "Ualá", "url": "https://www.ua.la/sumate"},
     ],
     "company_bonus": 10,
     "rss_feeds": [],
