@@ -41,6 +41,19 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(db.list_jobs(
                 q=q.get("q", ""), cv=q.get("cv", ""), status=q.get("status", ""),
                 min_score=int(q.get("min_score") or 0), location=q.get("location", "")))
+        if u.path == "/api/export":
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            status = q.get("status", "aplicada")
+            if status not in ("aplicada", "interesa", "descartada", "nueva"):
+                status = "aplicada"
+            body = db.export_csv(status).encode("utf-8-sig")  # con BOM para que Excel respete los acentos
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", f'attachment; filename="ofertas-{status}.csv"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if u.path == "/api/config":
             return self._json(config.load())
         if u.path == "/api/status":

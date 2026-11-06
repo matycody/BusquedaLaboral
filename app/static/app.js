@@ -150,6 +150,9 @@ function render() {
       : b.score - a.score
   );
 
+  const ex = $("btnExport");
+  ex.hidden = !["aplicada", "interesa"].includes(state.tab);
+  ex.href = "/api/export?status=" + state.tab;
   $("count").textContent = rows.length === 1 ? "1 oferta" : `${rows.length} ofertas`;
 
   if (!rows.length) {

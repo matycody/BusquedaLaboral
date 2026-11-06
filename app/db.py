@@ -143,6 +143,29 @@ def update_job(job_id, status=None, notes=None):
     return {"ok": True}
 
 
+EXPORT_COLUMNS = [
+    ("Puesto", "title"), ("Empresa", "company"), ("Lugar", "location"), ("Puntaje", "score"),
+    ("CV usado", "cv"), ("Estado", "status"), ("Fecha de postulación", "applied_at"),
+    ("Publicada", "posted"), ("Portales", "portales"), ("Link", "link"), ("Notas", "notes"),
+]
+
+
+def export_csv(status="aplicada"):
+    """CSV (separado por ; para el Excel en español) con las ofertas de un estado."""
+    import csv
+    import io
+    out = io.StringIO()
+    w = csv.writer(out, delimiter=";", lineterminator="\r\n")
+    w.writerow([h for h, _ in EXPORT_COLUMNS])
+    for j in list_jobs(status=status):
+        j["portales"] = ", ".join(s["name"] for s in j["sources"])
+        j["link"] = next((s["url"] for s in j["sources"] if s.get("url")), "")
+        for k in ("applied_at", "posted"):
+            j[k] = (j.get(k) or "")[:10]
+        w.writerow([str(j.get(k, "") or "").replace("\n", " ") for _, k in EXPORT_COLUMNS])
+    return out.getvalue()
+
+
 def clear():
     with conn() as c:
         c.execute("DELETE FROM jobs")
