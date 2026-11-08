@@ -345,7 +345,7 @@ function renderDetail() {
     </header>
     <div class="d-actions">
       <button class="btn btn-primary" data-act="post">Preparar postulación</button>
-      ${link ? `<a class="btn" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Abrir oferta</a>` : ""}
+      ${link ? `<a class="btn" href="${esc(link)}" data-act="open" title="Se abre en una ventana al costado">Abrir oferta</a>` : ""}
       ${tog("interesa", "★ Me interesa", "☆ Me interesa")}
       ${tog("aplicada", "✓ Aplicada", "○ Aplicada")}
       ${j.status === "descartada" ? `<button class="btn" data-act="status" data-status="nueva">Recuperar</button>` : `<button class="btn btn-danger" data-act="status" data-status="descartada">Descartar</button>`}
@@ -736,7 +736,7 @@ function bind() {
   });
   $("pOpen").addEventListener("click", () => {
     const u = postJob?.sources[0]?.url;
-    if (u) window.open(u, "_blank", "noopener");
+    if (u) openSide(postJob.id, u);
   });
   $("pApplied").addEventListener("click", async () => {
     if (!postJob) return;
@@ -793,6 +793,13 @@ function bind() {
       case "post":
         openPost(id);
         break;
+      case "open": {
+        e.preventDefault();
+        const jb = state.jobs.find((x) => x.id === id);
+        const u = jb?.sources?.[0]?.url;
+        if (u) openSide(id, u);
+        break;
+      }
       case "demo":
         loadDemo();
         break;
@@ -997,3 +1004,51 @@ $("formSetup").addEventListener("submit", saveSetup);
 $("wNext").addEventListener("click", wzNext);
 $("wBack").addEventListener("click", () => wzShow(wzStep - 1));
 $("btnRubro").addEventListener("click", () => { $("dConfig").close(); openSetup(); });
+
+
+/* ---------- postulación en ventana lateral ---------- */
+let sideWin = null;
+let pendingApply = null;
+function openSide(id, url) {
+  const j = state.jobs.find((x) => x.id === id);
+  const w = Math.round(screen.availWidth * (isMobile() ? 1 : 0.55));
+  const feat = `popup=yes,width=${w},height=${screen.availHeight},left=${screen.availLeft + screen.availWidth - w},top=${screen.availTop}`;
+  const win = window.open("about:blank", "ofertaLateral", feat);
+  if (!win) { window.open(url, "_blank", "noopener"); }  // el navegador bloqueó la ventana: se abre como pestaña
+  else {
+    try { win.opener = null; } catch (e) { /* ya está aislada */ }
+    win.location.href = url;
+    win.focus();
+    sideWin = win;
+  }
+  pendingApply = { id, title: j?.title || "la oferta", company: j?.company || "" };
+  hideApplyAsk();
+}
+function showApplyAsk() {
+  if (!pendingApply) return;
+  const box = $("applyAsk");
+  $("applyAskText").textContent = `¿Te postulaste a ${pendingApply.title}${pendingApply.company ? " en " + pendingApply.company : ""}?`;
+  box.hidden = false;
+}
+function hideApplyAsk() { $("applyAsk").hidden = true; }
+function checkReturn() {
+  if (!pendingApply || !$("applyAsk").hidden) return;
+  // volvió a la app (o cerró la ventana lateral): preguntamos
+  if (document.visibilityState === "visible" && (!sideWin || sideWin.closed || document.hasFocus())) showApplyAsk();
+}
+window.addEventListener("focus", () => setTimeout(checkReturn, 400));
+document.addEventListener("visibilitychange", checkReturn);
+setInterval(() => { if (pendingApply && sideWin && sideWin.closed) checkReturn(); }, 1500);
+async function answerApply(kind) {
+  const p = pendingApply;
+  hideApplyAsk();
+  pendingApply = null;
+  if (!p) return;
+  if (kind === "si") { await setStatus(p.id, "aplicada"); toast("Marcada como aplicada. Sigamos con la próxima."); }
+  else if (kind === "no-sirve") { await setStatus(p.id, "descartada"); }
+  if (sideWin && !sideWin.closed && kind !== "luego") { try { sideWin.close(); } catch (e) { /* nada */ } }
+  if (kind === "luego") pendingApply = null;
+}
+$("applyYes").addEventListener("click", () => answerApply("si"));
+$("applyLater").addEventListener("click", () => answerApply("luego"));
+$("applyNo").addEventListener("click", () => answerApply("no-sirve"));

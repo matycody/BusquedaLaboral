@@ -77,3 +77,7 @@ Aparece un cartel con el avance por fuente (portales, empresas, Gmail, guardado)
 La primera vez se abre un asistente de 4 pasos: datos personales (nombre, correo, teléfono), rubro y puestos, zona/modalidad/nivel de experiencia y CV (opcional, se guarda en `data/cvs`). De ahí salen los puestos buscados, las zonas que sirven, las penalizaciones por nivel y los datos de las postulaciones. Se puede repetir desde Configuración → "Editar mi perfil y rubro".
 
 Las ofertas que no nombran nada de lo que buscás se limitan a 10 puntos y quedan ocultas con el filtro "Relevantes" (el de por defecto); "Todas" las muestra.
+
+## Postularse en ventana lateral
+
+"Abrir oferta" abre el aviso en una ventana al costado (55% del ancho, a la derecha). Al volver a la app o cerrar esa ventana, pregunta "¿Te postulaste a…?": **Sí, apliqué** la marca como aplicada y pasa a la siguiente oferta; **Todavía no** la deja como está; **No me sirve** la descarta. Los portales no permiten mostrarse dentro de la propia app (bloquean los marcos), por eso es una ventana aparte. Si el navegador bloquea ventanas emergentes, se abre como pestaña común.

@@ -430,3 +430,11 @@ dialog::backdrop { background: rgba(21, 33, 43, 0.45); }
 .so-steps .so-listo { color: #1a7f4b; }
 .so-steps .so-corriendo { color: var(--ink); font-weight: 600; }
 .so-steps .so-fail { color: #a3261f; }
+
+#applyAsk { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60; background: var(--ink); color: #fff; border-radius: 12px; padding: 14px 16px; width: min(520px, calc(100vw - 24px)); box-shadow: 0 14px 40px rgba(0,0,0,.35); display: grid; gap: 10px; }
+#applyAsk[hidden] { display: none; }
+.aa-text { font-weight: 600; font-size: 15px; }
+.aa-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+#applyAsk .btn { background: #fff; color: var(--ink); border-color: #fff; }
+#applyAsk .btn-primary { background: #2fa36b; color: #fff; border-color: #2fa36b; }
+#applyAsk .btn-quiet { background: transparent; color: #cfd8df; border-color: transparent; }
