@@ -134,6 +134,8 @@ class Handler(BaseHTTPRequestHandler):
         body = self._body()
         if not self._begin(public=("/api/register", "/api/login", "/api/logout")):
             return
+        if u.path == "/api/register" and self.client_address[0] not in ("127.0.0.1", "::1"):
+            return self._json({"error": "Las cuentas nuevas se crean desde la computadora donde corre el programa."}, 403)
         if u.path in ("/api/register", "/api/login"):
             try:
                 if u.path == "/api/register":

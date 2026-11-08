@@ -535,3 +535,17 @@ dialog.settings .dlg-head .hint { margin: 0; }
 .co-follow { border: 1px solid var(--line); background: #fff; border-radius: 99px; font: inherit; font-size: 12px; font-weight: 600; padding: 1px 9px; cursor: pointer; color: #1a7f4b; }
 .co-follow:hover { background: #eef6f1; }
 .companies { max-height: 52vh; overflow: auto; }
+
+.btn .ico { display: none; }
+@media (max-width: 640px) {
+  .topbar-actions { display: grid !important; grid-template-columns: 1fr auto auto auto; gap: 8px; }
+  .topbar-actions .btn { flex: none; }
+  .topbar-actions .lbl { display: none; }
+  .topbar-actions .btn .ico { display: inline; font-size: 18px; line-height: 1; }
+  .topbar-actions #btnSearch { padding: 10px 12px; }
+  .topbar-actions .btn:not(#btnSearch) { min-width: 46px; padding: 8px 10px; }
+  dialog.settings { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; border: 0; }
+  .dlg-foot { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  #applyAsk { bottom: max(12px, env(safe-area-inset-bottom)); }
+  #searchFloat { right: 8px; left: 8px; width: auto; bottom: max(8px, env(safe-area-inset-bottom)); }
+}

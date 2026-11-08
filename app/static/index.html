@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Buscador de empleo</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315212b'/%3E%3Cpath d='M8 11h9M8 21h9M17 11v10M17 16h7' stroke='%23fff' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='16' r='2.6' fill='%23e8c81c'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#15212b">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -25,9 +30,9 @@
     </div>
     <div class="topbar-actions">
       <button class="btn btn-primary" id="btnSearch">Buscar ofertas</button>
-      <button class="btn" id="btnAdd">Agregar oferta</button>
-      <button class="btn" id="btnConfig">Configuración</button>
-      <button class="btn btn-quiet" id="btnAccount" title="Mi cuenta"><span id="accName">Mi cuenta</span></button>
+      <button class="btn" id="btnAdd" aria-label="Agregar oferta"><span class="lbl">Agregar oferta</span><span class="ico" aria-hidden="true">＋</span></button>
+      <button class="btn" id="btnConfig" aria-label="Configuración"><span class="lbl">Configuración</span><span class="ico" aria-hidden="true">⚙</span></button>
+      <button class="btn btn-quiet" id="btnAccount" title="Mi cuenta" aria-label="Mi cuenta"><span class="lbl" id="accName">Mi cuenta</span><span class="ico" aria-hidden="true">☺</span></button>
     </div>
   </div>
 </header>
