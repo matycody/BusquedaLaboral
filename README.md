@@ -99,3 +99,11 @@ Está organizada en secciones (Mi perfil, Qué busco, Dónde, Portales, Empresas
 ## Empresas según tu rubro
 
 Al elegir rubros en el asistente se cargan empresas de ese rubro (ventas: Coto, Carrefour, Jumbo…; limpieza y seguridad: Prosegur, Brink's…; programación: Mercado Libre, Globant…) más agencias de empleo. En el menú **Mis empresas** aparece además **Contratando ahora**: las empresas con más ofertas relevantes entre las que trajo Buscar ofertas, con un botón **+ Seguir** para sumarlas. Tocar el nombre filtra sus ofertas.
+
+## Lectura del CV
+
+Al subir el CV (Word, texto, ODT o PDF hecho desde un editor) se lee su texto y se suman al perfil las aptitudes que aparecen (herramientas, programas, oficios) y se refuerzan las palabras que ya estaban. Un PDF escaneado como imagen no se puede leer: en ese caso se guarda el archivo y se avisa.
+
+## Usarlo desde el celular
+
+`python run.py --red` abre la app a tu red WiFi y muestra la dirección para escribir en el celular. Las cuentas nuevas solo se pueden crear desde la computadora. En el celular se puede "Agregar a la pantalla de inicio" para usarla como app.

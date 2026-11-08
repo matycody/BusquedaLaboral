@@ -7,7 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, ctx, db, presets, scoring, search, users
+from . import config, ctx, cvparse, db, presets, scoring, search, users
 from .sources import demo
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -207,10 +207,17 @@ class Handler(BaseHTTPRequestHandler):
             with open(os.path.join(folder, prof + ext), "wb") as f:
                 f.write(raw)
             cfg = config.load()
+            info = {"ok": True, "leido": False, "agregadas": [], "reforzadas": [], "rubros": []}
             if prof in cfg.get("profiles", {}):
                 cfg["profiles"][prof]["cv_file"] = str(body.get("filename"))[:120]
+                res = cvparse.analyze(cvparse.extract_text(os.path.join(folder, prof + ext)), cfg["profiles"][prof].get("keywords", {}))
+                if res:
+                    cfg["profiles"][prof]["keywords"], info["agregadas"], info["reforzadas"], info["rubros"] = res
+                    info["leido"] = True
                 config.save(cfg)
-            return self._json({"ok": True})
+                if info["leido"]:
+                    db.recalc()
+            return self._json(info)
         if u.path == "/api/config":
             config.save(body)
             return self._json(db.recalc())

@@ -35,7 +35,7 @@ function toast(text) {
   t.textContent = text;
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.hidden = true), 4000);
+  toastTimer = setTimeout(() => (t.hidden = true), Math.min(15000, Math.max(4000, text.length * 70)));
 }
 
 function ago(iso) {
@@ -1135,17 +1135,21 @@ async function saveSetup(ev) {
   };
   try {
     await api("/api/setup", "POST", body);
+    const cvMsgs = [];
     for (const input of document.querySelectorAll("#wCvs input[type=file]")) {
       const f = input.files[0];
       if (!f) continue;
       const key = input.dataset.cvkey === "general" ? "general" : input.dataset.cvkey;
-      await api("/api/cv", "POST", { profile: key, filename: f.name, data: await fileToBase64(f) });
+      const r = await api("/api/cv", "POST", { profile: key, filename: f.name, data: await fileToBase64(f) });
+      cvMsgs.push(r.leido
+        ? `Leí tu CV (${f.name}): sumé ${r.agregadas.length} aptitudes${r.agregadas.length ? " (" + r.agregadas.slice(0, 6).join(", ") + ")" : ""} y reforcé ${r.reforzadas.length}.`
+        : `Guardé ${f.name}, pero no pude leer su texto. Probá con una versión en Word (.docx) o texto para sumar tus aptitudes.`);
     }
     $("dSetup").close();
     state.cfg = await api("/api/config");
     renderCvFilter();
     await loadJobs();
-    toast("Perfil guardado. Apretá Buscar ofertas para traer los primeros avisos.");
+    toast(cvMsgs.length ? cvMsgs.join(" ") : "Perfil guardado. Apretá Buscar ofertas para traer los primeros avisos.");
   } catch (e) { toast("No se pudo guardar: " + e.message); }
 }
 $("formSetup").addEventListener("submit", saveSetup);
