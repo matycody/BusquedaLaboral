@@ -15,6 +15,7 @@ Después abrí http://127.0.0.1:8000 (o `python run.py 9000` para otro puerto).
 ## Qué hace hoy
 
 - **Ofertas de ejemplo**: en Configuración → Datos (o desde la pantalla vacía) cargás ofertas de prueba, con duplicados entre portales para ver el agrupado.
+- **Talent.com** (primera página de cada búsqueda) y **LinkedIn** (lista pública, apagado por defecto: sus términos no permiten la lectura automática; usalo con moderación o preferí las alertas por Gmail).
 - **Jooble** (opcional): agregador de muchos sitios, por su API oficial. Pedí una clave gratuita en jooble.org/api/about, pegala en ⚙ Configuración → Jooble y activalo.
 - **Pantalla**: lista de ofertas a la izquierda y detalle a la derecha (en el celular, el detalle ocupa toda la pantalla). Cada oferta muestra una etiqueta de calidad, el desglose "por qué este puntaje" y qué CV conviene. Atajos: ↑ ↓ para moverte, S guardar, D descartar, A aplicada.
 - **Avisos**: cuando aparece una oferta nueva con puntaje alto (80 por defecto) te avisa en pantalla y, si lo permitís, con una notificación del navegador. Las postulaciones sin novedades después de unos días (7 por defecto) se marcan con "Hacer seguimiento". Ambos valores se cambian en ⚙ Configuración → Avisos.

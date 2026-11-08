@@ -544,6 +544,8 @@ function openConfig() {
   $("cBuPages").value = bu.max_pages || 2;
   $("cBuZonas").value = (bu.zonas || []).join("\n");
   $("cBuQ").value = (bu.queries || []).join("\n");
+  $("cTaOn").checked = !!((c.portales || {}).talent || {}).enabled;
+  $("cLiOn").checked = !!((c.portales || {}).linkedin || {}).enabled;
   $("cJbOn").checked = !!((c.portales || {}).jooble || {}).enabled;
   $("cJbKey").value = "";
   refreshJoobleHint();
@@ -582,6 +584,8 @@ async function saveConfig(ev) {
       queries: textToList($("cBuQ").value),
     },
   };
+  cfg.portales.talent = { ...(cfg.portales.talent || {}), enabled: $("cTaOn").checked };
+  cfg.portales.linkedin = { ...(cfg.portales.linkedin || {}), enabled: $("cLiOn").checked };
   cfg.portales.jooble = { ...(cfg.portales.jooble || {}), enabled: $("cJbOn").checked };
   cfg.portales.buscojobs = { ...(cfg.portales.buscojobs || {}), enabled: $("cBjOn").checked };
   cfg.portales.zonajobs = { ...(cfg.portales.zonajobs || {}), enabled: $("cZjOn").checked };

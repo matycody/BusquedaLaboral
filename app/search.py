@@ -5,7 +5,7 @@ import threading
 import time
 
 from . import config, db
-from .sources import bumeran, buscojobs, companies, computrabajo, gmail, jooble, rss, zonajobs
+from .sources import bumeran, buscojobs, companies, computrabajo, gmail, jooble, linkedin, rss, talent, zonajobs
 
 STATE_PATH = os.path.join(config.DATA_DIR, "state.json")
 _lock = threading.Lock()
@@ -55,7 +55,7 @@ def run_search():
         feeds = cfg.get("rss_feeds", [])
         con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
         portales = cfg.get("portales", {})
-        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble))
+        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("LinkedIn", linkedin))
                    if portales.get(name.lower(), {}).get("enabled") and portales.get(name.lower(), {}).get("queries")]
         gm = cfg.get("gmail", {})
         gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")

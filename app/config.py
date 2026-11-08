@@ -67,6 +67,18 @@ DEFAULT = {
             "queries": ["electricista", "ayudante electricista", "tablerista", "mantenimiento electrico",
                         "programador", "desarrollador web", "desarrollador python", "analista de datos", "soporte tecnico"],
         },
+        "talent": {
+            "enabled": True,
+            "location": "Buenos Aires",
+            "queries": ["electricista", "tablerista", "mantenimiento electrico",
+                        "programador junior", "desarrollador web", "analista de datos"],
+        },
+        "linkedin": {
+            "enabled": False,
+            "max_pages": 1,
+            "location": "Buenos Aires, Argentina",
+            "queries": ["electricista", "programador junior", "analista de datos"],
+        },
         "jooble": {
             "enabled": False,
             "max_pages": 2,
