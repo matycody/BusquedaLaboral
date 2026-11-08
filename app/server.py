@@ -181,6 +181,7 @@ class Handler(BaseHTTPRequestHandler):
                     cfg["setup_done"] = True  # solo cambió los datos personales
                 else:
                     return self._json({"error": "Elegí al menos un rubro o escribí un puesto"}, 400)
+            cfg = presets.apply_empresas(cfg, body.get("rubros") or [])
             cfg = presets.apply_perfil(cfg, body.get("perfil"))
             config.save(cfg)
             return self._json(db.recalc())

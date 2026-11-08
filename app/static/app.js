@@ -74,18 +74,49 @@ const isMyCompany = (name) => {
 };
 const norm = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
+const NO_COMPANY = ["", "confidencial", "empresa no indicada", "empresa confidencial"];
+function computeHiring(jobs) {
+  const by = new Map();
+  jobs.forEach((j) => {
+    const n = norm(j.company);
+    if (NO_COMPANY.includes(n) || j.status === "descartada" || j.score < 15) return;
+    const e = by.get(n) || { name: j.company.trim(), count: 0, best: 0 };
+    e.count += 1;
+    e.best = Math.max(e.best, j.score);
+    by.set(n, e);
+  });
+  return [...by.values()].sort((a, b) => b.count - a.count || b.best - a.best).slice(0, 12);
+}
+
 function renderCompanies() {
   const list = state.cfg.empresas || [];
-  $("companies").innerHTML = list.length
-    ? list
-        .map((e) => {
-          const main = e.url || "https://www.google.com/search?q=" + encodeURIComponent(e.name + " trabajá con nosotros");
-          const li = "https://www.linkedin.com/jobs/search/?keywords=" + encodeURIComponent(e.name);
-          return `<li class="company"><a href="${esc(main)}" target="_blank" rel="noopener noreferrer" title="${e.url ? "Página de empleos" : "Buscar su página de empleos"}">${esc(e.name)}</a>
-            <a class="alt" href="${esc(li)}" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>`;
-        })
-        .join("")
-    : `<li class="hint">Agregalas en Configuración.</li>`;
+  const hiring = (state.hiring || []).filter((h) => !isMyCompany(h.name));
+  const mine = list
+    .map((e) => {
+      const main = e.url || "https://www.google.com/search?q=" + encodeURIComponent(e.name + " trabajá con nosotros");
+      const li = "https://www.linkedin.com/jobs/search/?keywords=" + encodeURIComponent(e.name);
+      return `<li class="company"><a href="${esc(main)}" target="_blank" rel="noopener noreferrer" title="${e.url ? "Página de empleos" : "Buscar su página de empleos"}">${esc(e.name)}</a>
+        <a class="alt" href="${esc(li)}" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>`;
+    })
+    .join("");
+  const hot = hiring
+    .map((h) => `<li class="company"><button type="button" class="co-name" data-co="${esc(h.name)}" title="Ver sus ofertas">${esc(h.name)}</button>
+        <span class="co-meta"><span class="co-count">${h.count} ${h.count === 1 ? "oferta" : "ofertas"}</span><button type="button" class="co-follow" data-follow="${esc(h.name)}" title="Sumar a mis empresas">+ Seguir</button></span></li>`)
+    .join("");
+  $("companies").innerHTML =
+    (hot ? `<li class="co-head">Contratando ahora <span class="hint">según tus ofertas</span></li>${hot}` : "") +
+    `<li class="co-head">Mis empresas</li>` +
+    (mine || `<li class="hint" style="padding:4px 8px">Todavía no hay. Sumalas con “+ Seguir” o en Configuración.</li>`);
+}
+
+async function followCompany(name) {
+  const cfg = structuredClone(state.cfg);
+  if ((cfg.empresas || []).some((e) => norm(e.name) === norm(name))) return;
+  cfg.empresas = [...(cfg.empresas || []), { name, url: "" }];
+  await api("/api/config", "POST", cfg);
+  state.cfg = cfg;
+  toast(`${name} sumada a tus empresas.`);
+  await loadJobs();
 }
 
 /* ---------- carga y filtros ---------- */
@@ -119,6 +150,8 @@ async function loadJobs() {
     toast("No se pudieron cargar las ofertas. ¿Sigue corriendo run.py?");
     state.jobs = [];
   }
+  if (!p.get("q") && !p.get("location") && !state.cv) state.hiring = computeHiring(state.jobs);
+  renderCompanies();
   renderSourceFilter();
   render();
   checkAlerts();
@@ -733,6 +766,12 @@ function bind() {
     loadJobs();
   });
   $("fOnlyEmp").addEventListener("change", render);
+  $("companies").addEventListener("click", (e) => {
+    const f = e.target.closest("[data-follow]");
+    if (f) { followCompany(f.dataset.follow); return; }
+    const c = e.target.closest("[data-co]");
+    if (c) { $("fQ").value = c.dataset.co; $("empMenu").open = false; loadJobs(); }
+  });
   $("fSort").addEventListener("change", (e) => {
     state.sort = e.target.value;
     render();

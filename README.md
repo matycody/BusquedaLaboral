@@ -95,3 +95,7 @@ Al abrir la app hay que **crear una cuenta** (nombre, correo y contraseña de 8+
 ## Configuración
 
 Está organizada en secciones (Mi perfil, Qué busco, Dónde, Portales, Empresas, Alertas por Gmail, Mensajes de postulación, Automático y avisos, Mis datos). Los puestos, lugares y zonas se editan como etiquetas (se escribe y se aprieta Enter), las palabras que suman o restan puntos se ajustan con su número al lado, las empresas son una lista con nombre y link, y cada portal se activa con un interruptor.
+
+## Empresas según tu rubro
+
+Al elegir rubros en el asistente se cargan empresas de ese rubro (ventas: Coto, Carrefour, Jumbo…; limpieza y seguridad: Prosegur, Brink's…; programación: Mercado Libre, Globant…) más agencias de empleo. En el menú **Mis empresas** aparece además **Contratando ahora**: las empresas con más ofertas relevantes entre las que trajo Buscar ofertas, con un botón **+ Seguir** para sumarlas. Tocar el nombre filtra sus ofertas.

@@ -143,3 +143,34 @@ def apply_perfil(cfg, perfil):
     if nivel:
         cfg["penalize"] = dict(nivel["penalize"])
     return cfg
+
+
+EMPRESAS = {
+    "electricidad": ["Edesur", "Edenor", "Schneider Electric", "Siemens", "ABB", "Prysmian", "Transener", "Tenaris"],
+    "programacion": ["Mercado Libre", "Ualá", "Globant", "Accenture", "Despegar", "Naranja X", "Endava", "Belatrix"],
+    "salud": ["Hospital Italiano", "Hospital Alemán", "Swiss Medical", "OSDE", "Galeno", "Sanatorio Otamendi", "Farmacity", "Hospital Británico"],
+    "construccion": ["Techint", "Sacde", "Grupo Roggio", "Easy", "Sodimac", "Camuzzi", "Metrogas"],
+    "administracion": ["Banco Galicia", "Banco Santander", "BBVA", "Banco Nación", "Telecom", "Deloitte", "PwC", "Arcor"],
+    "ventas": ["Coto", "Carrefour", "Jumbo", "Disco", "Frávega", "Musimundo", "Falabella", "Cencosud"],
+    "logistica": ["Mercado Libre", "Andreani", "OCA", "Correo Argentino", "DHL", "PedidosYa", "Rappi", "Cruz del Sur"],
+    "gastronomia": ["Arcos Dorados", "Alsea", "Mostaza", "Havanna", "Café Martínez", "Burger King", "Hilton", "Sheraton"],
+    "educacion": ["Wall Street English", "Universidad Austral", "UADE", "Siglo 21", "ORT Argentina", "Universidad de Belgrano"],
+    "limpieza": ["Prosegur", "Brink's", "Securitas", "ISS", "Sodexo", "Compass Group"],
+}
+AGENCIAS = ["Randstad", "Adecco", "Manpower", "Grupo Gestión"]
+
+
+def apply_empresas(cfg, rubros):
+    """Empresas de interés según los rubros elegidos (se conservan las que el usuario cargó con su link)."""
+    nombres = []
+    for r in rubros:
+        for n in EMPRESAS.get(r, []):
+            if n not in nombres:
+                nombres.append(n)
+    if not nombres:
+        return cfg
+    nombres += [a for a in AGENCIAS if a not in nombres]
+    propias = [e for e in cfg.get("empresas", []) if e.get("url")]
+    prop_n = {e["name"].lower() for e in propias}
+    cfg["empresas"] = propias + [{"name": n, "url": ""} for n in nombres if n.lower() not in prop_n]
+    return cfg
