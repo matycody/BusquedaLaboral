@@ -393,16 +393,19 @@ async function runBusy(btn, busyText, fn) {
 }
 
 let progTimer = null;
+const SEGS = 24;
 function stopProgress() {
   clearInterval(progTimer);
   progTimer = null;
-  $("searchOverlay").hidden = true;
+  $("searchFloat").hidden = true;
 }
 function startProgress() {
-  $("soFill").style.width = "2%";
-  $("soPct").textContent = "0%";
+  const bar = $("sfBar");
+  bar.innerHTML = "<i></i>".repeat(SEGS);
+  $("sfCount").textContent = "0";
   $("soSteps").innerHTML = "";
-  $("searchOverlay").hidden = false;
+  $("searchFloat").classList.remove("min");
+  $("searchFloat").hidden = false;
   const icon = { espera: "○", corriendo: "…", listo: "✓", "falló": "✕" };
   progTimer = setInterval(async () => {
     try {
@@ -410,13 +413,20 @@ function startProgress() {
       const steps = p.steps || [];
       if (!steps.length) return;
       const hechos = steps.filter((x) => x.estado === "listo" || x.estado === "falló").length;
-      const pct = Math.min(99, Math.round((hechos / steps.length) * 100));
-      $("soFill").style.width = Math.max(pct, 3) + "%";
-      $("soPct").textContent = pct + "%";
+      const llenos = Math.floor((hechos / steps.length) * SEGS);
+      [...bar.children].forEach((el, i) => {
+        el.className = i < llenos ? "on" : i === llenos ? "run" : "";
+      });
+      $("sfCount").textContent = p.encontradas || 0;
       $("soSteps").innerHTML = steps.map((x) => `<li class="so-${esc(x.estado === "falló" ? "fail" : x.estado)}"><span>${icon[x.estado] || "○"}</span> ${esc(x.name)}</li>`).join("");
-    } catch (e) { /* si falla una consulta, la próxima lo corrige */ }
+    } catch (e) { /* la próxima consulta lo corrige */ }
   }, 800);
 }
+$("sfMin").addEventListener("click", () => {
+  const f = $("searchFloat");
+  f.classList.toggle("min");
+  $("sfMin").textContent = f.classList.contains("min") ? "+" : "–";
+});
 
 async function doSearch() {
   await runBusy($("btnSearch"), "Buscando…", async () => {
@@ -444,7 +454,7 @@ async function doSearch() {
       const errs = r.errores?.length ? ` ${r.errores.length} feed(s) fallaron.` : "";
       const emp = vacias.length ? ` Sin puestos legibles en: ${vacias.map((x) => x.empresa).join(", ")}; abrilas desde Mis empresas.` : "";
       const det = r.detalles?.leidos ? ` Leí el aviso completo de ${r.detalles.leidos} ofertas de Computrabajo para puntuarlas mejor.` : "";
-      toast(`${r.agregadas} ofertas nuevas.${det}${por}${gm}${errs}${emp}`);
+      toast(`${r.agregadas} ofertas nuevas cargadas.${det}${por}${gm}${errs}${emp}`);
       console.info("Revisión", { empresas: r.empresas, portales: r.portales, gmail: r.gmail, errores: r.errores });
     }
     await loadJobs();

@@ -410,14 +410,22 @@ dialog::backdrop { background: rgba(21, 33, 43, 0.45); }
 .setup-grid .seg-option { border: 1px solid var(--line); align-items: flex-start; padding: 10px; }
 .setup-grid .seg-option:has(input:checked) { border-color: var(--ink); background: var(--line-soft); }
 
-#searchOverlay { position: fixed; inset: 0; z-index: 50; background: rgba(20, 30, 40, .45); display: grid; place-items: center; padding: 16px; }
-#searchOverlay[hidden] { display: none; }
-.so-card { background: #fff; border-radius: 12px; padding: 22px 24px; width: min(440px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,.25); display: grid; gap: 10px; }
-.so-title { font-size: 18px; font-weight: 700; }
-.so-bar { height: 10px; background: var(--line-soft); border-radius: 99px; overflow: hidden; }
-.so-fill { height: 100%; width: 3%; background: var(--ink); border-radius: 99px; transition: width .5s ease; }
-.so-pct { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.so-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
+#searchFloat { position: fixed; right: 16px; bottom: 16px; z-index: 50; width: min(340px, calc(100vw - 32px)); background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.22); overflow: hidden; }
+#searchFloat[hidden] { display: none; }
+.sf-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 10px 14px; }
+.sf-title { font-weight: 700; }
+.sf-min { width: 26px; height: 26px; border: 0; border-radius: 6px; background: var(--line-soft); cursor: pointer; font-size: 16px; line-height: 1; }
+.sf-body { padding: 0 14px 14px; display: grid; gap: 10px; }
+#searchFloat.min .sf-body { display: none; }
+#searchFloat.min .sf-head { padding-bottom: 10px; }
+.sf-bar { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; height: 22px; }
+.sf-bar i { background: var(--line); border-radius: 2px; transition: background .3s, transform .3s; }
+.sf-bar i.on { background: var(--ink); }
+.sf-bar i.run { background: var(--ink-3); animation: sfpulse 1s ease-in-out infinite; }
+@keyframes sfpulse { 50% { opacity: .35; } }
+.sf-count { font-size: 14px; color: var(--ink-2); }
+.sf-count b { font-size: 22px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.so-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; max-height: 30vh; overflow: auto; font-size: 13px; }
 .so-steps li { display: flex; gap: 8px; color: var(--ink-3); }
 .so-steps .so-listo { color: #1a7f4b; }
 .so-steps .so-corriendo { color: var(--ink); font-weight: 600; }

@@ -46,7 +46,7 @@ def enrich_computrabajo(conf, pause=1.0):
     return {"leidos": ok, "fallos": bad}
 
 
-PROGRESS = {"running": False, "steps": []}
+PROGRESS = {"running": False, "steps": [], "encontradas": 0}
 
 
 def _step(name, estado):
@@ -78,6 +78,7 @@ def run_search():
         names = [n for n, _ in activos] + (["Empresas y feeds"] if use_emp else []) + (["Gmail"] if use_gm else []) + ["Guardando"]
         PROGRESS["steps"] = [{"name": n, "estado": "espera"} for n in names]
         PROGRESS["running"] = True
+        PROGRESS["encontradas"] = 0
         _step(names[0], "corriendo")
         jobs, errors, cjobs, report = [], [], [], []
         pjobs, preport = [], []
@@ -85,18 +86,21 @@ def run_search():
             _step(name, "corriendo")
             got, rep = mod.fetch({**portales[name.lower()], "queries": busquedas})
             pjobs += got
+            PROGRESS["encontradas"] += len(got)
             preport += [{**r, "portal": name} for r in rep]
             _step(name, "listo" if got or not any(r.get("nota") for r in rep) else "falló")
         if use_emp:
             _step("Empresas y feeds", "corriendo")
             jobs, errors = rss.fetch(feeds) if feeds else ([], [])
             cjobs, report = companies.fetch(cfg)
+            PROGRESS["encontradas"] += len(jobs) + len(cjobs)
             _step("Empresas y feeds", "listo")
         gjobs, greport = [], []
         if use_gm:
             _step("Gmail", "corriendo")
             try:
                 gjobs, greport = gmail.fetch(gm, gm_pass)
+                PROGRESS["encontradas"] += len(gjobs)
                 _step("Gmail", "listo")
             except Exception as e:
                 greport = [{"correo": "", "encontradas": 0, "nota": f"No se pudo leer Gmail: {e}"}]
