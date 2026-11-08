@@ -5,7 +5,7 @@ import threading
 import time
 
 from . import config, ctx, db
-from .sources import bumeran, buscojobs, companies, computrabajo, gmail, jooble, linkedin, rss, talent, zonajobs
+from .sources import bumeran, buscojobs, companies, computrabajo, gmail, jooble, linkedin, portalempleo, rss, talent, zonajobs
 
 _locks = {}
 _guard = threading.Lock()
@@ -80,7 +80,7 @@ def run_search():
         con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
         portales = cfg.get("portales", {})
         busquedas = cfg.get("busquedas") or []
-        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("LinkedIn", linkedin))
+        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("PortalEmpleo", portalempleo), ("LinkedIn", linkedin))
                    if portales.get(name.lower(), {}).get("enabled") and busquedas]
         gm = cfg.get("gmail", {})
         gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")
@@ -99,7 +99,7 @@ def run_search():
         pjobs, preport = [], []
         for name, mod in activos:
             _step(name, "corriendo")
-            got, rep = mod.fetch({**portales[name.lower()], "queries": busquedas})
+            got, rep = mod.fetch({**portales[name.lower()], "queries": busquedas, "zonas": (cfg.get("perfil") or {}).get("zonas") or []})
             pjobs += got
             PROGRESS["encontradas"] += len(got)
             preport += [{**r, "portal": name} for r in rep]

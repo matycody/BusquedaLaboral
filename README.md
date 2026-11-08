@@ -111,3 +111,7 @@ Al subir el CV (Word, texto, ODT o PDF hecho desde un editor) se lee su texto y 
 ## Seguimiento de postulaciones
 
 En la pestaña **Aplicadas** hay un resumen (aplicadas, esperando, para seguimiento, entrevistas, ofertas, rechazadas). En cada oferta aplicada se anota cómo va (sin novedades, me respondieron, entrevista, me ofrecieron el puesto, rechazada) y se marca "Hice seguimiento hoy"; el aviso de seguimiento cuenta desde el último contacto y se apaga cuando hay entrevista, oferta o rechazo. El CSV exportado incluye el resultado y la fecha del último seguimiento.
+
+## Portal Empleo y alertas por mail
+- **Portal Empleo** (portalempleo.gob.ar, Estado nacional): se lee con tus búsquedas y se quedan solo las ofertas de tus zonas. Se activa en Configuración → Portales.
+- **Indeed / LinkedIn**: no se consultan directo; creá alertas en cada portal con tu Gmail y activá «Alertas por Gmail» (hay una guía en ese panel).

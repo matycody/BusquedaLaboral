@@ -70,6 +70,7 @@ DEFAULT = {
             "queries": ["electricista", "tablerista", "mantenimiento electrico",
                         "programador junior", "desarrollador web", "analista de datos"],
         },
+        "portalempleo": {"enabled": True, "max_pages": 2},
         "linkedin": {
             "enabled": False,
             "max_pages": 1,
