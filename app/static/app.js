@@ -20,7 +20,12 @@ async function api(path, method = "GET", body) {
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error("El servidor respondió " + res.status);
+  if (res.status === 401) { showAuth(false); throw new Error("Iniciá sesión"); }
+  if (!res.ok) {
+    let msg = "El servidor respondió " + res.status;
+    try { msg = (await res.json()).error || msg; } catch (e) { /* sin detalle */ }
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -909,7 +914,19 @@ function closeDetail() {
   }
 }
 
+let booted = false;
 async function init() {
+  let me;
+  try {
+    me = await (await fetch("/api/me")).json();
+  } catch (e) {
+    toast("No se pudo conectar. ¿Sigue corriendo run.py?");
+    return;
+  }
+  if (!me.user) { showAuth(me.primera); return; }
+  state.user = me.user;
+  $("auth").hidden = true;
+  $("accName").textContent = (me.user.nombre || me.user.email).split(" ")[0];
   try {
     state.cfg = await api("/api/config");
   } catch (e) {
@@ -918,14 +935,86 @@ async function init() {
   }
   renderCvFilter();
   renderCompanies();
-  bind();
+  if (!booted) { bind(); booted = true; setInterval(() => refreshStatus("changed"), 60000); }
   await loadJobs();
   if (!state.cfg.setup_done) openSetup();
   await refreshStatus(true);
-  setInterval(() => refreshStatus("changed"), 60000);
 }
 init();
 
+
+/* ---------- cuenta: ingreso, registro, salida ---------- */
+let authMode = "login";
+function setAuthMode(mode) {
+  authMode = mode;
+  document.querySelectorAll("[data-auth]").forEach((b) => b.classList.toggle("on", b.dataset.auth === mode));
+  document.querySelectorAll("#formAuth [data-only]").forEach((el) => (el.hidden = el.dataset.only !== mode));
+  $("auSubmit").textContent = mode === "login" ? "Ingresar" : "Crear mi cuenta";
+  $("auPass").autocomplete = mode === "login" ? "current-password" : "new-password";
+  $("authErr").hidden = true;
+}
+function showAuth(primera) {
+  $("auth").hidden = false;
+  setAuthMode(primera ? "register" : "login");
+  setTimeout(() => $("auEmail").focus(), 50);
+}
+async function submitAuth(ev) {
+  ev.preventDefault();
+  const err = (t) => { $("authErr").textContent = t; $("authErr").hidden = false; };
+  const email = $("auEmail").value.trim(), password = $("auPass").value;
+  if (authMode === "register") {
+    if (!$("auNombre").value.trim()) return err("Escribí tu nombre.");
+    if (password.length < 8) return err("La contraseña debe tener al menos 8 caracteres.");
+    if (password !== $("auPass2").value) return err("Las contraseñas no coinciden.");
+  }
+  $("auSubmit").disabled = true;
+  try {
+    const res = await fetch("/api/" + authMode, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, nombre: $("auNombre").value.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) return err(data.error || "No se pudo ingresar.");
+    location.reload();
+  } catch (e) {
+    err("No se pudo conectar con el programa.");
+  } finally {
+    $("auSubmit").disabled = false;
+  }
+}
+function openAccount() {
+  $("acNombre").textContent = state.user?.nombre || "Sin nombre";
+  $("acEmail").textContent = state.user?.email || "";
+  ["acOld", "acNew", "acDelPass"].forEach((i) => ($(i).value = ""));
+  openDialog($("dAccount"));
+}
+async function logout() {
+  try { await api("/api/logout", "POST"); } catch (e) { /* igual recargamos */ }
+  location.reload();
+}
+document.querySelectorAll("[data-auth]").forEach((b) => b.addEventListener("click", () => setAuthMode(b.dataset.auth)));
+$("formAuth").addEventListener("submit", submitAuth);
+$("auShow").addEventListener("click", () => {
+  const show = $("auPass").type === "password";
+  $("auPass").type = show ? "text" : "password";
+  $("auShow").textContent = show ? "Ocultar" : "Ver";
+});
+$("btnAccount").addEventListener("click", openAccount);
+$("acLogout").addEventListener("click", logout);
+$("acProfile").addEventListener("click", () => { $("dAccount").close(); openSetup(); });
+$("acChange").addEventListener("click", async () => {
+  try {
+    await api("/api/account/password", "POST", { old: $("acOld").value, new: $("acNew").value });
+    ["acOld", "acNew"].forEach((i) => ($(i).value = ""));
+    toast("Contraseña cambiada.");
+  } catch (e) { toast(e.message); }
+});
+$("acDelete").addEventListener("click", async () => {
+  if (!$("acDelPass").value) { toast("Escribí tu contraseña para confirmar."); return; }
+  if (!confirm("Se borran tu cuenta, tus ofertas y tus CV de esta computadora. ¿Seguro?")) return;
+  try { await api("/api/account/delete", "POST", { password: $("acDelPass").value }); location.reload(); }
+  catch (e) { toast(e.message); }
+});
 
 /* ---------- registro inicial / perfil ---------- */
 let wzStep = 1;

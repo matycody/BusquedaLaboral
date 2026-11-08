@@ -4,16 +4,26 @@ import os
 import threading
 import time
 
-from . import config, db
+from . import config, ctx, db
 from .sources import bumeran, buscojobs, companies, computrabajo, gmail, jooble, linkedin, rss, talent, zonajobs
 
-STATE_PATH = os.path.join(config.DATA_DIR, "state.json")
-_lock = threading.Lock()
+_locks = {}
+_guard = threading.Lock()
+
+
+def _lock_for():
+    with _guard:
+        return _locks.setdefault(ctx.data_dir(), threading.Lock())
+
+
+def _state_path():
+    os.makedirs(ctx.data_dir(), exist_ok=True)
+    return os.path.join(ctx.data_dir(), "state.json")
 
 
 def load_state():
     try:
-        with open(STATE_PATH, encoding="utf-8") as f:
+        with open(_state_path(), encoding="utf-8") as f:
             return json.load(f)
     except (OSError, ValueError):
         return {}
@@ -22,8 +32,7 @@ def load_state():
 def _save_state(**kw):
     st = load_state()
     st.update(kw)
-    os.makedirs(config.DATA_DIR, exist_ok=True)
-    with open(STATE_PATH, "w", encoding="utf-8") as f:
+    with open(_state_path(), "w", encoding="utf-8") as f:
         json.dump(st, f)
 
 
@@ -46,19 +55,25 @@ def enrich_computrabajo(conf, pause=1.0):
     return {"leidos": ok, "fallos": bad}
 
 
-PROGRESS = {"running": False, "steps": [], "encontradas": 0}
+_progress = {}
+
+
+def progress():
+    return _progress.setdefault(ctx.data_dir(), {"running": False, "steps": [], "encontradas": 0})
 
 
 def _step(name, estado):
-    for st in PROGRESS["steps"]:
+    for st in progress()["steps"]:
         if st["name"] == name:
             st["estado"] = estado
 
 
 def run_search():
     """Devuelve el resultado, o None si ya hay otra búsqueda corriendo."""
-    if not _lock.acquire(blocking=False):
+    lock = _lock_for()
+    if not lock.acquire(blocking=False):
         return None
+    PROGRESS = progress()
     try:
         cfg = config.load()
         feeds = cfg.get("rss_feeds", [])
@@ -114,18 +129,21 @@ def run_search():
         return res
     finally:
         PROGRESS["running"] = False
-        _lock.release()
+        lock.release()
 
 
 def scheduler_loop(stop):
-    """Cada minuto mira si toca buscar según Configuración → Búsqueda automática."""
+    """Cada minuto mira, cuenta por cuenta, si toca buscar según Configuración → Búsqueda automática."""
+    from . import users
     while not stop.wait(60):
-        try:
-            auto = config.load().get("auto", {})
-            if not auto.get("enabled"):
-                continue
-            every = max(1, float(auto.get("every_hours", 6))) * 3600
-            if time.time() - load_state().get("last_search", 0) >= every:
-                run_search()
-        except Exception as e:  # el planificador nunca debe caerse
-            print("Búsqueda automática falló:", e)
+        for folder in users.all_dirs():
+            try:
+                with ctx.using(folder):
+                    auto = config.load().get("auto", {})
+                    if not auto.get("enabled"):
+                        continue
+                    every = max(1, float(auto.get("every_hours", 6))) * 3600
+                    if time.time() - load_state().get("last_search", 0) >= every:
+                        run_search()
+            except Exception as e:  # el planificador nunca debe caerse
+                print("Búsqueda automática falló:", e)

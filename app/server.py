@@ -7,7 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, presets, scoring, search
+from . import config, ctx, db, presets, scoring, search, users
 from .sources import demo
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -17,9 +17,29 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
-    def _json(self, data, code=200):
+    def _token(self):
+        m = re.search(r"(?:^|;\s*)sid=([\w\-]+)", self.headers.get("Cookie", ""))
+        return m.group(1) if m else None
+
+    def _begin(self, public=()):
+        """Identifica al usuario de este pedido y apunta los datos a su carpeta. False si falta iniciar sesión."""
+        self.user = users.user_for(self._token())
+        ctx.set_dir(users.user_dir(self.user["id"]) if self.user else None)
+        path = urlparse(self.path).path
+        if path.startswith("/api/") and path not in public and not self.user:
+            self._json({"error": "Iniciá sesión", "login": True}, 401)
+            return False
+        return True
+
+    def _session_cookie(self, token, days=users.SESSION_DAYS):
+        age = days * 86400 if token else 0
+        return f"sid={token or ''}; HttpOnly; SameSite=Lax; Path=/; Max-Age={age}"
+
+    def _json(self, data, code=200, headers=None):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -36,6 +56,25 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
+        if not self._begin(public=("/api/me",)):
+            return
+        if u.path == "/api/me":
+            return self._json({"user": self.user, "primera": not users.has_users()})
+        if u.path == "/api/cv":
+            prof = re.sub(r"\W", "", parse_qs(u.query).get("profile", [""])[0])
+            folder = os.path.join(ctx.data_dir(), "cvs")
+            name = next((f for f in (os.listdir(folder) if os.path.isdir(folder) else []) if os.path.splitext(f)[0] == prof), None)
+            if not prof or not name:
+                return self._json({"error": "No hay CV cargado"}, 404)
+            with open(os.path.join(folder, name), "rb") as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", mimetypes.guess_type(name)[0] or "application/octet-stream")
+            self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if u.path == "/api/jobs":
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             return self._json(db.list_jobs(
@@ -63,7 +102,7 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/config":
             return self._json(config.load())
         if u.path == "/api/search/progress":
-            return self._json(search.PROGRESS)
+            return self._json(search.progress())
         if u.path == "/api/presets":
             return self._json(presets.listing())
         if u.path == "/api/status":
@@ -89,7 +128,34 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path)
+        origin = self.headers.get("Origin")
+        if origin and urlparse(origin).netloc != self.headers.get("Host"):
+            return self._json({"error": "Pedido no permitido"}, 403)
         body = self._body()
+        if not self._begin(public=("/api/register", "/api/login", "/api/logout")):
+            return
+        if u.path in ("/api/register", "/api/login"):
+            try:
+                if u.path == "/api/register":
+                    user = users.register(body.get("email"), body.get("password"), body.get("nombre"))
+                else:
+                    user = users.authenticate(body.get("email"), body.get("password"))
+            except users.AuthError as e:
+                return self._json({"error": str(e)}, 400)
+            token = users.new_session(user["id"])
+            return self._json({"user": user}, headers={"Set-Cookie": self._session_cookie(token)})
+        if u.path == "/api/logout":
+            users.end_session(self._token())
+            return self._json({"ok": True}, headers={"Set-Cookie": self._session_cookie("")})
+        if u.path in ("/api/account/password", "/api/account/delete"):
+            try:
+                if u.path.endswith("password"):
+                    users.change_password(self.user["id"], body.get("old"), body.get("new"), self._token())
+                    return self._json({"ok": True})
+                users.delete_account(self.user["id"], body.get("password"))
+                return self._json({"ok": True}, headers={"Set-Cookie": self._session_cookie("")})
+            except users.AuthError as e:
+                return self._json({"error": str(e)}, 400)
         if u.path == "/api/demo":
             return self._json(db.upsert_jobs(demo.fetch()))
         if u.path == "/api/search":
@@ -130,8 +196,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "Archivo ilegible"}, 400)
             if not raw or len(raw) > 5 * 1024 * 1024:
                 return self._json({"error": "El CV debe pesar hasta 5 MB"}, 400)
-            os.makedirs(os.path.join(config.DATA_DIR, "cvs"), exist_ok=True)
-            with open(os.path.join(config.DATA_DIR, "cvs", prof + ext), "wb") as f:
+            folder = os.path.join(ctx.data_dir(), "cvs")
+            os.makedirs(folder, exist_ok=True)
+            for old in os.listdir(folder):  # un solo CV por perfil
+                if os.path.splitext(old)[0] == prof:
+                    os.remove(os.path.join(folder, old))
+            with open(os.path.join(folder, prof + ext), "wb") as f:
                 f.write(raw)
             cfg = config.load()
             if prof in cfg.get("profiles", {}):
@@ -153,13 +223,15 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run(host="127.0.0.1", port=8000):
-    config.load()
-    db.conn().close()
-    try:
-        if db.clean_descriptions():
-            db.recalc()
-    except Exception as e:  # la limpieza nunca debe impedir que arranque
-        print("No se pudieron limpiar descripciones viejas:", e)
+    for folder in users.all_dirs():
+        try:
+            with ctx.using(folder):
+                config.load()
+                db.conn().close()
+                if db.clean_descriptions():
+                    db.recalc()
+        except Exception as e:  # la limpieza nunca debe impedir que arranque
+            print("No se pudo preparar una cuenta:", e)
     stop = threading.Event()
     threading.Thread(target=search.scheduler_loop, args=(stop,), daemon=True).start()
     srv = ThreadingHTTPServer((host, port), Handler)

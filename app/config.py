@@ -1,10 +1,12 @@
 """Configuración persistente (data/config.json). Todo se edita desde la web."""
+import copy
 import json
 import os
 
+from . import ctx
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE, "data")
-CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
+DATA_DIR = ctx.ROOT_DATA  # datos globales (cuentas); los de cada usuario están en ctx.data_dir()
 
 DEFAULT = {
     "location": "",
@@ -113,16 +115,21 @@ DEFAULT = {
 }
 
 
+def _path(name):
+    os.makedirs(ctx.data_dir(), exist_ok=True)
+    return os.path.join(ctx.data_dir(), name)
+
+
 def load():
-    os.makedirs(DATA_DIR, exist_ok=True)
-    if not os.path.exists(CONFIG_PATH):
+    path = _path("config.json")
+    if not os.path.exists(path):
         save(DEFAULT)
-        return json.loads(json.dumps(DEFAULT))
-    with open(CONFIG_PATH, encoding="utf-8") as f:
+        return copy.deepcopy(DEFAULT)
+    with open(path, encoding="utf-8") as f:
         cfg = json.load(f)
     migrar = "busquedas" not in cfg
     for k, v in DEFAULT.items():
-        cfg.setdefault(k, v)
+        cfg.setdefault(k, copy.deepcopy(v))
     if migrar:  # configuraciones viejas: unir los puestos que tenía cada portal
         union = []
         for p in (cfg.get("portales") or {}).values():
@@ -135,12 +142,8 @@ def load():
 
 
 def save(cfg):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+    with open(_path("config.json"), "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
-
-
-SECRETS_PATH = os.path.join(DATA_DIR, "secrets.json")
 
 
 def get_secret(name, env=None):
@@ -148,16 +151,16 @@ def get_secret(name, env=None):
     if env and os.environ.get(env):
         return os.environ[env]
     try:
-        with open(SECRETS_PATH, encoding="utf-8") as f:
+        with open(_path("secrets.json"), encoding="utf-8") as f:
             return json.load(f).get(name, "")
     except (OSError, ValueError):
         return ""
 
 
 def set_secret(name, value):
-    os.makedirs(DATA_DIR, exist_ok=True)
+    sp = _path("secrets.json")
     try:
-        with open(SECRETS_PATH, encoding="utf-8") as f:
+        with open(sp, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, ValueError):
         data = {}
@@ -165,9 +168,9 @@ def set_secret(name, value):
         data[name] = value
     else:
         data.pop(name, None)
-    with open(SECRETS_PATH, "w", encoding="utf-8") as f:
+    with open(sp, "w", encoding="utf-8") as f:
         json.dump(data, f)
     try:
-        os.chmod(SECRETS_PATH, 0o600)
+        os.chmod(sp, 0o600)
     except OSError:
         pass

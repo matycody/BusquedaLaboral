@@ -81,3 +81,13 @@ Las ofertas que no nombran nada de lo que buscás se limitan a 10 puntos y queda
 ## Postularse en ventana lateral
 
 "Abrir oferta" abre el aviso en una ventana al costado (55% del ancho, a la derecha). Al volver a la app o cerrar esa ventana, pregunta "¿Te postulaste a…?": **Sí, apliqué** la marca como aplicada y pasa a la siguiente oferta; **Todavía no** la deja como está; **No me sirve** la descarta. Los portales no permiten mostrarse dentro de la propia app (bloquean los marcos), por eso es una ventana aparte. Si el navegador bloquea ventanas emergentes, se abre como pestaña común.
+
+## Cuentas
+
+Al abrir la app hay que **crear una cuenta** (nombre, correo y contraseña de 8+ caracteres) o ingresar. Cada cuenta tiene su propia carpeta en `data/users/<id>/` con su perfil, ofertas, CV, claves (Gmail, Jooble) y búsqueda automática; una cuenta no ve los datos de otra. La primera cuenta que se crea se queda con los datos que ya hubiera de la versión sin cuentas.
+
+- Las contraseñas se guardan con PBKDF2-SHA256 (200 mil vueltas y sal propia), nunca en texto. La sesión dura 30 días y se cierra desde **Mi cuenta → Cerrar sesión**.
+- Tras 5 intentos fallidos se bloquea el ingreso de ese correo por 10 minutos.
+- **Mi cuenta** permite cambiar la contraseña (cierra las demás sesiones), editar el perfil y eliminar la cuenta con todos sus datos.
+- Si olvidaste la contraseña: `python run.py --reset-password tu@correo.com NuevaClave123` (hace falta acceso a la carpeta del programa).
+- El servidor escucha solo en `127.0.0.1`. Para abrirlo a otras personas habría que ponerlo detrás de HTTPS y de un dominio; no está hecho.

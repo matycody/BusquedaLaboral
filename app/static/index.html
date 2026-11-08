@@ -27,6 +27,7 @@
       <button class="btn btn-primary" id="btnSearch">Buscar ofertas</button>
       <button class="btn" id="btnAdd">Agregar oferta</button>
       <button class="btn" id="btnConfig">Configuración</button>
+      <button class="btn btn-quiet" id="btnAccount" title="Mi cuenta"><span id="accName">Mi cuenta</span></button>
     </div>
   </div>
 </header>
@@ -102,6 +103,57 @@
         <button type="button" class="btn" data-close>Cancelar</button>
         <button type="submit" class="btn btn-primary">Guardar oferta</button>
       </div>
+    </div>
+  </form>
+</dialog>
+
+<div id="auth" hidden>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <svg width="38" height="38" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#15212b"/><path d="M8 11h9M8 21h9M17 11v10M17 16h7" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="24" cy="16" r="2.6" fill="#e8c81c"/></svg>
+      <h1>Buscador de empleo</h1>
+    </div>
+    <p class="auth-sub">Juntamos las ofertas de todos los portales en un solo lugar y te mostramos primero las que mejor encajan con tu CV.</p>
+    <div class="auth-tabs" role="tablist">
+      <button type="button" class="on" data-auth="login" role="tab">Ingresar</button>
+      <button type="button" data-auth="register" role="tab">Crear cuenta</button>
+    </div>
+    <form id="formAuth" autocomplete="on">
+      <div class="field" data-only="register"><label for="auNombre">Nombre y apellido</label><input class="input" id="auNombre" autocomplete="name"></div>
+      <div class="field"><label for="auEmail">Correo</label><input class="input" id="auEmail" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="auPass">Contraseña</label>
+        <div class="pass-row"><input class="input" id="auPass" type="password" autocomplete="current-password" required><button type="button" class="btn btn-quiet" id="auShow">Ver</button></div>
+        <p class="hint" data-only="register">Mínimo 8 caracteres.</p></div>
+      <div class="field" data-only="register"><label for="auPass2">Repetí la contraseña</label><input class="input" id="auPass2" type="password" autocomplete="new-password"></div>
+      <p class="auth-error" id="authErr" role="alert" hidden></p>
+      <button type="submit" class="btn btn-primary auth-submit" id="auSubmit">Ingresar</button>
+    </form>
+    <p class="hint auth-foot">Tus datos y tus CV se guardan en esta computadora, separados por cuenta. ¿Olvidaste la contraseña? En la carpeta del programa ejecutá <code>python run.py --reset-password tu@correo.com NuevaClave123</code>.</p>
+  </div>
+</div>
+
+<dialog id="dAccount">
+  <form method="dialog" id="formAccount">
+    <div class="dlg-head"><h2>Mi cuenta</h2></div>
+    <div class="dlg-body">
+      <p><b id="acNombre"></b><br><span class="hint" id="acEmail"></span></p>
+      <div class="field"><button type="button" class="btn" id="acProfile">Editar mi perfil, rubro y CV</button></div>
+      <h3 class="acc-h">Cambiar contraseña</h3>
+      <div class="cols-2">
+        <div class="field"><label for="acOld">Contraseña actual</label><input class="input" id="acOld" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="acNew">Contraseña nueva</label><input class="input" id="acNew" type="password" autocomplete="new-password" minlength="8"></div>
+      </div>
+      <button type="button" class="btn" id="acChange">Cambiar contraseña</button>
+      <h3 class="acc-h">Eliminar mi cuenta</h3>
+      <p class="hint">Borra tus ofertas, tu perfil y tus CV de esta computadora. No se puede deshacer.</p>
+      <div class="cols-2">
+        <div class="field"><label for="acDelPass">Tu contraseña</label><input class="input" id="acDelPass" type="password" autocomplete="current-password"></div>
+        <div class="field" style="align-self:end"><button type="button" class="btn btn-danger" id="acDelete">Eliminar cuenta</button></div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn" id="acLogout">Cerrar sesión</button>
+      <button type="button" class="btn btn-primary" data-close>Listo</button>
     </div>
   </form>
 </dialog>

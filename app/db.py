@@ -4,15 +4,12 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 
-from . import config
+from . import config, ctx
 from .scoring import dedupe_key, score_job
 
-DB_PATH = os.path.join(config.DATA_DIR, "jobs.db")
-
-
 def conn():
-    os.makedirs(config.DATA_DIR, exist_ok=True)
-    c = sqlite3.connect(DB_PATH)
+    os.makedirs(ctx.data_dir(), exist_ok=True)
+    c = sqlite3.connect(os.path.join(ctx.data_dir(), "jobs.db"))
     c.row_factory = sqlite3.Row
     c.execute(
         """CREATE TABLE IF NOT EXISTS jobs (
