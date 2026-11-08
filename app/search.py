@@ -55,8 +55,9 @@ def run_search():
         feeds = cfg.get("rss_feeds", [])
         con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
         portales = cfg.get("portales", {})
+        busquedas = cfg.get("busquedas") or []
         activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("LinkedIn", linkedin))
-                   if portales.get(name.lower(), {}).get("enabled") and portales.get(name.lower(), {}).get("queries")]
+                   if portales.get(name.lower(), {}).get("enabled") and busquedas]
         gm = cfg.get("gmail", {})
         gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")
         use_gm = bool(gm.get("enabled") and gm.get("email") and gm_pass)
@@ -68,7 +69,7 @@ def run_search():
         cjobs, report = companies.fetch(cfg)
         pjobs, preport = [], []
         for name, mod in activos:
-            got, rep = mod.fetch(portales[name.lower()])
+            got, rep = mod.fetch({**portales[name.lower()], "queries": busquedas})
             pjobs += got
             preport += [{**r, "portal": name} for r in rep]
         gjobs, greport = [], []
@@ -78,7 +79,7 @@ def run_search():
             except Exception as e:
                 greport = [{"correo": "", "encontradas": 0, "nota": f"No se pudo leer Gmail: {e}"}]
         res = db.upsert_jobs(jobs + cjobs + pjobs + gjobs)
-        res["detalles"] = enrich_computrabajo(portales.get("computrabajo", {}))
+        res["detalles"] = enrich_computrabajo({**portales.get("computrabajo", {}), "queries": busquedas})
         res.update({"errores": errors, "empresas": report, "portales": preport, "gmail": greport})
         _save_state(last_search=time.time(), last_added=res["agregadas"])
         return res

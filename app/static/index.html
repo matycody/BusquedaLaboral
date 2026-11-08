@@ -105,6 +105,18 @@
   </form>
 </dialog>
 
+<dialog id="dSetup">
+  <form method="dialog" id="formSetup">
+    <div class="dlg-head"><h2>¿Qué trabajo buscás?</h2></div>
+    <div class="dlg-body">
+      <p class="hint">Elegí uno o más rubros. Se arman solos los puestos a buscar en todos los portales y el puntaje de cada oferta. Después lo podés cambiar en Configuración.</p>
+      <div id="setupRubros" class="setup-grid"></div>
+      <div class="field"><label for="setupExtra">Otros puestos (uno por línea, opcional)</label><textarea class="input" id="setupExtra" rows="3" placeholder="Ej: operador de CNC"></textarea></div>
+    </div>
+    <div class="dlg-foot"><span></span><div class="group"><button type="button" class="btn" data-close>Ahora no</button><button type="submit" class="btn btn-primary">Empezar</button></div></div>
+  </form>
+</dialog>
+
 <dialog id="dConfig">
   <form method="dialog" id="formConfig">
     <div class="dlg-head"><h2>Configuración</h2></div>
@@ -125,27 +137,25 @@
       </div>
 
       <h3 class="section-title">Portales</h3>
+      <div class="field">
+        <label for="cBusq">Puestos que busco (se usan en todos los portales)</label>
+        <textarea class="input" id="cBusq" rows="5"></textarea>
+        <p class="hint">Uno por línea. <button type="button" class="btn btn-quiet" id="btnRubro">Cambiar de rubro</button></p>
+      </div>
+
       <label class="seg-option"><input type="checkbox" id="cCtOn"> Buscar en Computrabajo</label>
       <div class="cols-2">
         <div class="field"><label for="cCtRegion">Zona (como figura en su dirección)</label><input class="input" id="cCtRegion" placeholder="buenos-aires-gba"></div>
         <div class="field"><label for="cCtPages">Páginas por búsqueda</label><input class="input" id="cCtPages" type="number" min="1" max="5"></div>
       </div>
-      <div class="field">
-        <label for="cCtQ">Puestos a buscar</label>
-        <textarea class="input" id="cCtQ" rows="5"></textarea>
-        <p class="hint">Uno por línea. Cada página trae 20 ofertas; más páginas hacen la búsqueda más lenta.</p>
-      </div>
+      <p class="hint">Cada página trae 20 ofertas; más páginas hacen la búsqueda más lenta.</p>
 
       <label class="seg-option"><input type="checkbox" id="cBuOn"> Buscar en Bumeran</label>
       <div class="cols-2">
         <div class="field"><label for="cBuZonas">Zonas que me sirven</label><textarea class="input" id="cBuZonas" rows="3"></textarea></div>
         <div class="field"><label for="cBuPages">Páginas por búsqueda</label><input class="input" id="cBuPages" type="number" min="1" max="5"></div>
       </div>
-      <div class="field">
-        <label for="cBuQ">Puestos a buscar en Bumeran</label>
-        <textarea class="input" id="cBuQ" rows="4"></textarea>
-        <p class="hint">Uno por línea. Bumeran busca en todo el país, así que solo se guardan las ofertas cuyo lugar contiene alguna de las zonas.</p>
-      </div>
+      <p class="hint">Bumeran busca en todo el país, así que solo se guardan las ofertas cuyo lugar contiene alguna de las zonas.</p>
 
       <label class="seg-option"><input type="checkbox" id="cZjOn"> Buscar en ZonaJobs <span class="hint">(mismos puestos y zonas que Bumeran por defecto)</span></label>
 

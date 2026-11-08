@@ -7,7 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, scoring, search
+from . import config, db, presets, scoring, search
 from .sources import demo
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -62,6 +62,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(scoring.explain(job, config.load()))
         if u.path == "/api/config":
             return self._json(config.load())
+        if u.path == "/api/presets":
+            return self._json(presets.listing())
         if u.path == "/api/status":
             st = search.load_state()
             return self._json({"last_search": st.get("last_search"), "last_added": st.get("last_added", 0)})
@@ -101,6 +103,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(db.recalc())
         if u.path == "/api/clear":
             return self._json(db.clear())
+        if u.path == "/api/setup":
+            cfg = presets.apply(config.load(), body.get("rubros") or [], body.get("extra") or [])
+            if not cfg.get("setup_done"):
+                return self._json({"error": "Elegí al menos un rubro o escribí un puesto"}, 400)
+            config.save(cfg)
+            return self._json(db.recalc())
         if u.path == "/api/config":
             config.save(body)
             return self._json(db.recalc())

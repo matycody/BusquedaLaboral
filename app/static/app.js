@@ -44,6 +44,8 @@ function ago(iso) {
   return d.toLocaleDateString("es-AR");
 }
 
+function cvHue(k) { let h = 0; for (const ch of String(k)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; }
+const cvColor = (k) => `hsl(${cvHue(k)} 55% 42%)`;
 const cvLabel = (k) => state.cfg?.profiles?.[k]?.label || k;
 const debounce = (fn, ms = 250) => {
   let t;
@@ -251,7 +253,7 @@ function needsFollowUp(j) {
 
 function tagsHtml(j) {
   return [
-    `<span class="chip chip-cv chip-${esc(j.cv)}">${esc(cvLabel(j.cv))}</span>`,
+    `<span class="chip chip-cv" style="background:hsl(${cvHue(j.cv)} 60% 94%);color:${cvColor(j.cv)}">${esc(cvLabel(j.cv))}</span>`,
     STATUS_LABEL[j.status] ? `<span class="chip chip-${esc(j.status)}">${STATUS_LABEL[j.status]}</span>` : "",
     isNew(j) ? `<span class="chip chip-nuevo">Nueva</span>` : "",
     needsFollowUp(j) ? `<span class="chip chip-seguimiento" title="Postulaste hace ${daysSince(j.applied_at)} días">Hacer seguimiento</span>` : "",
@@ -265,7 +267,7 @@ function cardHtml(j) {
   const [qk, ql] = quality(j.score);
   const sub = [j.company || "Empresa no indicada", j.location || "Lugar no indicado"].join(" · ");
   const star = j.status === "interesa";
-  return `<li class="job ${sel ? "selected" : ""}" data-id="${j.id}" data-cv="${esc(j.cv)}" data-status="${esc(j.status)}" data-act="select" tabindex="0" role="button" aria-pressed="${sel}">
+  return `<li class="job ${sel ? "selected" : ""}" style="border-left-color:${cvColor(j.cv)}" data-id="${j.id}" data-cv="${esc(j.cv)}" data-status="${esc(j.status)}" data-act="select" tabindex="0" role="button" aria-pressed="${sel}">
     ${avatar(j.company)}
     <div class="job-main">
       <h3 class="job-title">${esc(j.title)}</h3>
@@ -518,7 +520,7 @@ function openConfig() {
   $("cCtOn").checked = !!ct.enabled;
   $("cCtRegion").value = ct.region || "buenos-aires-gba";
   $("cCtPages").value = ct.max_pages || 2;
-  $("cCtQ").value = (ct.queries || []).join("\n");
+  $("cBusq").value = (c.busquedas || []).join("\n");
   const auto = c.auto || {};
   $("cAutoOn").checked = !!auto.enabled;
   $("cAutoH").value = auto.every_hours || 6;
@@ -543,7 +545,6 @@ function openConfig() {
   $("cBuOn").checked = !!bu.enabled;
   $("cBuPages").value = bu.max_pages || 2;
   $("cBuZonas").value = (bu.zonas || []).join("\n");
-  $("cBuQ").value = (bu.queries || []).join("\n");
   $("cTaOn").checked = !!((c.portales || {}).talent || {}).enabled;
   $("cLiOn").checked = !!((c.portales || {}).linkedin || {}).enabled;
   $("cJbOn").checked = !!((c.portales || {}).jooble || {}).enabled;
@@ -556,7 +557,7 @@ function openConfig() {
   $("cProfiles").innerHTML = Object.entries(c.profiles)
     .map(
       ([k, p]) => `<div class="field">
-        <label for="kw-${esc(k)}"><span class="dot dot-${esc(k)}" style="display:inline-block;margin-right:6px"></span>${esc(p.label)}</label>
+        <label for="kw-${esc(k)}"><span class="dot" style="display:inline-block;margin-right:6px;background:${cvColor(k)}"></span>${esc(p.label)}</label>
         <textarea class="input" id="kw-${esc(k)}" data-profile="${esc(k)}" rows="7">${esc(objToLines(p.keywords))}</textarea></div>`
     )
     .join("");
@@ -566,6 +567,7 @@ function openConfig() {
 async function saveConfig(ev) {
   ev.preventDefault();
   const cfg = structuredClone(state.cfg);
+  cfg.busquedas = textToList($("cBusq").value);
   cfg.location = $("cLocation").value.trim();
   cfg.locations_ok = textToList($("cLocs").value);
   cfg.rss_feeds = textToList($("cRss").value);
@@ -575,13 +577,11 @@ async function saveConfig(ev) {
       enabled: $("cCtOn").checked,
       region: $("cCtRegion").value.trim() || "buenos-aires-gba",
       max_pages: Math.min(5, Math.max(1, Number($("cCtPages").value) || 2)),
-      queries: textToList($("cCtQ").value),
     },
     bumeran: {
       enabled: $("cBuOn").checked,
       max_pages: Math.min(5, Math.max(1, Number($("cBuPages").value) || 2)),
       zonas: textToList($("cBuZonas").value),
-      queries: textToList($("cBuQ").value),
     },
   };
   cfg.portales.talent = { ...(cfg.portales.talent || {}), enabled: $("cTaOn").checked };
@@ -859,7 +859,34 @@ async function init() {
   renderCompanies();
   bind();
   await loadJobs();
+  if (!state.cfg.setup_done) openSetup();
   await refreshStatus(true);
   setInterval(() => refreshStatus("changed"), 60000);
 }
 init();
+
+
+/* ---------- elección de rubro ---------- */
+async function openSetup() {
+  const list = await api("/api/presets");
+  $("setupRubros").innerHTML = list
+    .map((r) => `<label class="seg-option"><input type="checkbox" value="${esc(r.key)}"> <span><b>${esc(r.label)}</b><br><span class="hint">${esc(r.queries.slice(0, 3).join(", "))}…</span></span></label>`)
+    .join("");
+  $("setupExtra").value = "";
+  openDialog($("dSetup"));
+}
+async function saveSetup(ev) {
+  ev.preventDefault();
+  const rubros = [...document.querySelectorAll("#setupRubros input:checked")].map((i) => i.value);
+  const extra = textToList($("setupExtra").value);
+  if (!rubros.length && !extra.length) { toast("Elegí al menos un rubro o escribí un puesto."); return; }
+  try {
+    await api("/api/setup", "POST", { rubros, extra });
+    $("dSetup").close();
+    state.cfg = await api("/api/config");
+    await loadJobs();
+    toast("Listo. Apretá Buscar ofertas para traer los primeros avisos.");
+  } catch (e) { toast("No se pudo guardar: " + e.message); }
+}
+$("formSetup").addEventListener("submit", saveSetup);
+$("btnRubro").addEventListener("click", () => { $("dConfig").close(); openSetup(); });

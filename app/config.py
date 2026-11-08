@@ -8,6 +8,7 @@ CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
 
 DEFAULT = {
     "location": "",
+    "busquedas": [],
     "locations_ok": ["capital federal", "caba", "buenos aires", "remoto"],
     "min_score": 0,
     "profiles": {
@@ -121,6 +122,14 @@ def load():
         cfg = json.load(f)
     for k, v in DEFAULT.items():
         cfg.setdefault(k, v)
+    if "busquedas" not in cfg:  # configuraciones viejas: unir los puestos que tenía cada portal
+        union = []
+        for p in (cfg.get("portales") or {}).values():
+            for q in p.get("queries", []):
+                if q not in union:
+                    union.append(q)
+        cfg["busquedas"] = union
+        cfg["setup_done"] = True  # quien ya venía usando la app no necesita el asistente
     return cfg
 
 
