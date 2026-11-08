@@ -91,3 +91,7 @@ Al abrir la app hay que **crear una cuenta** (nombre, correo y contraseña de 8+
 - **Mi cuenta** permite cambiar la contraseña (cierra las demás sesiones), editar el perfil y eliminar la cuenta con todos sus datos.
 - Si olvidaste la contraseña: `python run.py --reset-password tu@correo.com NuevaClave123` (hace falta acceso a la carpeta del programa).
 - El servidor escucha solo en `127.0.0.1`. Para abrirlo a otras personas habría que ponerlo detrás de HTTPS y de un dominio; no está hecho.
+
+## Configuración
+
+Está organizada en secciones (Mi perfil, Qué busco, Dónde, Portales, Empresas, Alertas por Gmail, Mensajes de postulación, Automático y avisos, Mis datos). Los puestos, lugares y zonas se editan como etiquetas (se escribe y se aprieta Enter), las palabras que suman o restan puntos se ajustan con su número al lado, las empresas son una lista con nombre y link, y cada portal se activa con un interruptor.

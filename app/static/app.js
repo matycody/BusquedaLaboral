@@ -617,9 +617,12 @@ function openConfig() {
     .map(
       ([k, p]) => `<div class="field">
         <label for="kw-${esc(k)}"><span class="dot" style="display:inline-block;margin-right:6px;background:${cvColor(k)}"></span>${esc(p.label)}</label>
-        <textarea class="input" id="kw-${esc(k)}" data-profile="${esc(k)}" rows="7">${esc(objToLines(p.keywords))}</textarea></div>`
+        <textarea class="input" id="kw-${esc(k)}" data-profile="${esc(k)}" data-weights data-default="5" rows="7">${esc(objToLines(p.keywords))}</textarea></div>`
     )
     .join("");
+  $("cPEmail").value = (c.perfil || {}).email || "";
+  enhanceAll($("dConfig"));
+  showPane("perfil");
   openDialog($("dConfig"));
 }
 
@@ -653,6 +656,7 @@ async function saveConfig(ev) {
     return { name: name.trim(), url: rest.join("|").trim() };
   }).filter((e) => e.name);
   cfg.penalize = linesToObj($("cPen").value);
+  cfg.perfil = { ...(cfg.perfil || {}), email: $("cPEmail").value.trim() };
   document.querySelectorAll("[data-profile]").forEach((ta) => {
     cfg.profiles[ta.dataset.profile].keywords = linesToObj(ta.value);
   });
@@ -1157,3 +1161,98 @@ async function answerApply(kind) {
 $("applyYes").addEventListener("click", () => answerApply("si"));
 $("applyLater").addEventListener("click", () => answerApply("luego"));
 $("applyNo").addEventListener("click", () => answerApply("no-sirve"));
+
+
+/* ---------- Configuración: secciones y campos amigables ---------- */
+function showPane(name) {
+  document.querySelectorAll("#dConfig .st-pane").forEach((el) => (el.hidden = el.dataset.pane !== name));
+  document.querySelectorAll("#stNav button").forEach((b) => b.classList.toggle("on", b.dataset.pane === name));
+  const pane = document.querySelector(`#dConfig .st-pane[data-pane="${name}"]`);
+  if (pane) pane.scrollIntoView({ block: "start" });
+  document.querySelector(".st-content")?.scrollTo(0, 0);
+}
+document.querySelectorAll("#stNav button").forEach((b) => b.addEventListener("click", () => showPane(b.dataset.pane)));
+
+// Cada textarea con data-chips / data-weights / data-companies se esconde y se reemplaza por un editor;
+// el textarea sigue guardando el valor (una línea por elemento), así el resto del código no cambia.
+const widgets = new WeakMap();
+function enhanceAll(root) {
+  root.querySelectorAll("textarea[data-chips], textarea[data-weights], textarea[data-companies]").forEach((ta) => {
+    if (!widgets.has(ta)) {
+      const host = document.createElement("div");
+      host.className = "w-host";
+      ta.after(host);
+      ta.hidden = true;
+      widgets.set(ta, { host, render: null });
+      const kind = ta.hasAttribute("data-chips") ? chipsWidget : ta.hasAttribute("data-weights") ? weightsWidget : companiesWidget;
+      widgets.get(ta).render = kind(ta, host);
+    }
+    widgets.get(ta).render();
+  });
+}
+const lines = (ta) => ta.value.split("\n").map((x) => x.trim()).filter(Boolean);
+
+function chipsWidget(ta, host) {
+  let items = [];
+  const commit = () => { ta.value = items.join("\n"); };
+  function render() {
+    items = lines(ta);
+    host.innerHTML = `<div class="chips">${items.map((t, i) => `<span class="chip-i">${esc(t)}<button type="button" data-i="${i}" aria-label="Quitar ${esc(t)}">×</button></span>`).join("")}<input class="chip-input" placeholder="${esc(ta.dataset.placeholder || "Agregar…")}"></div>`;
+    const input = host.querySelector("input");
+    const add = () => {
+      input.value.split(/[,\n]/).map((x) => x.trim()).filter(Boolean).forEach((v) => { if (!items.some((x) => x.toLowerCase() === v.toLowerCase())) items.push(v); });
+      input.value = "";
+      commit(); render();
+      host.querySelector("input").focus();
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") { e.preventDefault(); if (input.value.trim()) add(); }
+      else if (e.key === "Backspace" && !input.value && items.length) { items.pop(); commit(); render(); host.querySelector("input").focus(); }
+    });
+    input.addEventListener("blur", () => { if (input.value.trim()) add(); });
+    host.querySelector(".chips").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-i]");
+      if (b) { items.splice(Number(b.dataset.i), 1); commit(); render(); }
+      else if (e.target.classList.contains("chips")) input.focus();
+    });
+  }
+  return render;
+}
+
+function weightsWidget(ta, host) {
+  let rows = [];
+  const commit = () => { ta.value = rows.map((r) => `${r.w}: ${r.n}`).join("\n"); };
+  const def = Number(ta.dataset.default || 5);
+  function render() {
+    rows = lines(ta).map((l) => { const i = l.lastIndexOf(":"); return { w: (i === -1 ? l : l.slice(0, i)).trim(), n: Number(i === -1 ? def : l.slice(i + 1)) || def }; });
+    host.innerHTML = `<div class="weights">${rows.map((r, i) => `<span class="w-chip ${r.n < 0 ? "neg" : ""}"><span class="w-word">${esc(r.w)}</span><input type="number" value="${r.n}" data-i="${i}" aria-label="Peso de ${esc(r.w)}"><button type="button" data-i="${i}" aria-label="Quitar ${esc(r.w)}">×</button></span>`).join("")}</div>
+      <div class="w-add"><input class="input w-new" placeholder="Agregar palabra…"><input class="input w-num" type="number" value="${def}" aria-label="Peso"><button type="button" class="btn btn-sm">Agregar</button></div>`;
+    host.querySelectorAll(".w-chip input").forEach((inp) => inp.addEventListener("change", () => { rows[Number(inp.dataset.i)].n = Number(inp.value) || 0; commit(); render(); }));
+    host.querySelectorAll(".w-chip button").forEach((b) => b.addEventListener("click", () => { rows.splice(Number(b.dataset.i), 1); commit(); render(); }));
+    const add = () => {
+      const w = host.querySelector(".w-new").value.trim();
+      if (!w) return;
+      const n = Number(host.querySelector(".w-num").value) || def;
+      const ex = rows.find((r) => r.w.toLowerCase() === w.toLowerCase());
+      if (ex) ex.n = n; else rows.push({ w, n });
+      commit(); render();
+      host.querySelector(".w-new").focus();
+    };
+    host.querySelector(".w-add button").addEventListener("click", add);
+    host.querySelector(".w-new").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+  }
+  return render;
+}
+
+function companiesWidget(ta, host) {
+  let rows = [];
+  const commit = () => { ta.value = rows.filter((r) => r.name.trim()).map((r) => (r.url.trim() ? `${r.name.trim()} | ${r.url.trim()}` : r.name.trim())).join("\n"); };
+  function render(keep) {
+    if (keep !== true) rows = lines(ta).map((l) => { const [n, ...u] = l.split("|"); return { name: n.trim(), url: u.join("|").trim() }; });
+    host.innerHTML = `<div class="co-list">${rows.map((r, i) => `<div class="co-row"><input class="input" data-k="name" data-i="${i}" value="${esc(r.name)}" placeholder="Empresa" aria-label="Empresa"><input class="input" data-k="url" data-i="${i}" value="${esc(r.url)}" placeholder="Link de su página de empleos (opcional)" aria-label="Link"><button type="button" class="btn btn-quiet" data-i="${i}" aria-label="Quitar">×</button></div>`).join("")}</div><button type="button" class="btn btn-sm co-add">+ Agregar empresa</button>`;
+    host.querySelectorAll(".co-row input").forEach((inp) => inp.addEventListener("input", () => { rows[Number(inp.dataset.i)][inp.dataset.k] = inp.value; commit(); }));
+    host.querySelectorAll(".co-row button").forEach((b) => b.addEventListener("click", () => { rows.splice(Number(b.dataset.i), 1); commit(); render(true); }));
+    host.querySelector(".co-add").addEventListener("click", () => { rows.push({ name: "", url: "" }); render(true); const ins = host.querySelectorAll('.co-row input[data-k="name"]'); ins[ins.length - 1].focus(); });
+  }
+  return render;
+}

@@ -223,126 +223,164 @@
   </form>
 </dialog>
 
-<dialog id="dConfig">
+<dialog id="dConfig" class="settings">
   <form method="dialog" id="formConfig">
-    <div class="dlg-head"><h2>Configuración</h2></div>
-    <div class="dlg-body">
-      <h3 class="section-title">Lugares</h3>
-      <div class="field"><label for="cLocation">Mi ubicación</label><input class="input" id="cLocation"></div>
-      <div class="field">
-        <label for="cLocs">Lugares que me sirven</label>
-        <textarea class="input" id="cLocs" rows="4"></textarea>
-        <p class="hint">Uno por línea. Las ofertas en estos lugares, o remotas, suman puntos.</p>
-      </div>
+    <div class="dlg-head"><h2>Configuración</h2><p class="hint">Ajustá qué buscás, dónde y en qué sitios. Los cambios se aplican al guardar.</p></div>
+    <div class="st-layout">
+      <nav class="st-nav" id="stNav" aria-label="Secciones">
+        <button type="button" data-pane="perfil" class="on">Mi perfil</button>
+        <button type="button" data-pane="busqueda">Qué busco</button>
+        <button type="button" data-pane="lugares">Dónde</button>
+        <button type="button" data-pane="portales">Portales</button>
+        <button type="button" data-pane="empresas">Empresas</button>
+        <button type="button" data-pane="gmail">Alertas por Gmail</button>
+        <button type="button" data-pane="mensajes">Mensajes de postulación</button>
+        <button type="button" data-pane="auto">Automático y avisos</button>
+        <button type="button" data-pane="datos">Mis datos</button>
+      </nav>
+      <div class="st-content">
 
-      <h3 class="section-title">Empresas de interés</h3>
-      <div class="field">
-        <label for="cEmp">Empresas</label>
-        <textarea class="input" id="cEmp" rows="5" placeholder="Coto | https://www.coto.com.ar/empleos/"></textarea>
-        <p class="hint">Una por línea: <b>Nombre | link de su página de empleos</b> (el link es opcional). Sus ofertas suman puntos y Buscar ofertas revisa los links.</p>
-      </div>
+        <section class="st-pane" data-pane="perfil">
+          <h3>Mi perfil</h3>
+          <p class="hint">Estos datos salen en tus mensajes de postulación. Se guardan solo en tu computadora.</p>
+          <div class="cols-2">
+            <div class="field"><label for="cPName">Nombre y apellido</label><input class="input" id="cPName" autocomplete="off"></div>
+            <div class="field"><label for="cPPhone">Teléfono</label><input class="input" id="cPPhone" autocomplete="off" placeholder="Opcional"></div>
+          </div>
+          <div class="field"><label for="cPEmail">Correo de contacto</label><input class="input" id="cPEmail" type="email" autocomplete="off"></div>
+          <div class="st-card">
+            <div><b>Rubro, experiencia y CV</b><p class="hint">Repetí el asistente para cambiar de rubro, tu nivel de experiencia o subir otro CV.</p></div>
+            <button type="button" class="btn" id="btnRubro">Abrir asistente</button>
+          </div>
+        </section>
 
-      <h3 class="section-title">Portales</h3>
-      <div class="field">
-        <label for="cBusq">Puestos que busco (se usan en todos los portales)</label>
-        <textarea class="input" id="cBusq" rows="5"></textarea>
-        <p class="hint">Uno por línea. <button type="button" class="btn btn-quiet" id="btnRubro">Editar mi perfil y rubro</button></p>
-      </div>
+        <section class="st-pane" data-pane="busqueda" hidden>
+          <h3>Qué busco</h3>
+          <div class="field">
+            <label for="cBusq">Puestos que busco</label>
+            <textarea class="input" id="cBusq" data-chips data-placeholder="Escribí un puesto y apretá Enter"></textarea>
+            <p class="hint">Se buscan en todos los portales a la vez. Ejemplo: electricista, cajero, enfermero.</p>
+          </div>
+          <h4>Palabras que suman puntos</h4>
+          <p class="hint">Cada CV tiene sus palabras. Cuanto más alto el número, más puntos suma una oferta que la nombra (en el título vale el doble).</p>
+          <div id="cProfiles" class="st-stack"></div>
+          <h4>Palabras que restan puntos</h4>
+          <p class="hint">Sirven para bajar ofertas que no te convienen. Ejemplo: senior con -15.</p>
+          <textarea class="input" id="cPen" data-weights data-default="-10" aria-label="Palabras que restan"></textarea>
+        </section>
 
-      <label class="seg-option"><input type="checkbox" id="cCtOn"> Buscar en Computrabajo</label>
-      <div class="cols-2">
-        <div class="field"><label for="cCtRegion">Zona (como figura en su dirección)</label><input class="input" id="cCtRegion" placeholder="buenos-aires-gba"></div>
-        <div class="field"><label for="cCtPages">Páginas por búsqueda</label><input class="input" id="cCtPages" type="number" min="1" max="5"></div>
-      </div>
-      <p class="hint">Cada página trae 20 ofertas; más páginas hacen la búsqueda más lenta.</p>
+        <section class="st-pane" data-pane="lugares" hidden>
+          <h3>Dónde</h3>
+          <div class="field"><label for="cLocation">Mi ubicación</label><input class="input" id="cLocation" placeholder="Ej: Claypole, Buenos Aires"></div>
+          <div class="field">
+            <label for="cLocs">Lugares donde puedo trabajar</label>
+            <textarea class="input" id="cLocs" data-chips data-placeholder="Escribí un lugar y apretá Enter"></textarea>
+            <p class="hint">Las ofertas en estos lugares, o remotas, suman puntos.</p>
+          </div>
+        </section>
 
-      <label class="seg-option"><input type="checkbox" id="cBuOn"> Buscar en Bumeran</label>
-      <div class="cols-2">
-        <div class="field"><label for="cBuZonas">Zonas que me sirven</label><textarea class="input" id="cBuZonas" rows="3"></textarea></div>
-        <div class="field"><label for="cBuPages">Páginas por búsqueda</label><input class="input" id="cBuPages" type="number" min="1" max="5"></div>
-      </div>
-      <p class="hint">Bumeran busca en todo el país, así que solo se guardan las ofertas cuyo lugar contiene alguna de las zonas.</p>
+        <section class="st-pane" data-pane="portales" hidden>
+          <h3>Portales de empleo</h3>
+          <p class="hint">Activá los sitios donde querés buscar. Cada uno usa tu lista de puestos.</p>
+          <div class="portal-list">
+            <div class="portal-card">
+              <label class="switch"><input type="checkbox" id="cCtOn"><span class="sw"></span></label>
+              <div class="pc-main"><b>Computrabajo</b><span class="hint">El portal más usado de Argentina. Trae 20 ofertas por página.</span>
+                <details class="pc-more"><summary>Ajustes</summary>
+                  <div class="cols-2">
+                    <div class="field"><label for="cCtRegion">Zona</label><input class="input" id="cCtRegion" placeholder="buenos-aires-gba"><p class="hint">Como figura en su dirección web.</p></div>
+                    <div class="field"><label for="cCtPages">Páginas por búsqueda</label><input class="input" id="cCtPages" type="number" min="1" max="5"><p class="hint">Más páginas, búsqueda más lenta.</p></div>
+                  </div></details></div>
+            </div>
+            <div class="portal-card">
+              <label class="switch"><input type="checkbox" id="cBuOn"><span class="sw"></span></label>
+              <div class="pc-main"><b>Bumeran</b><span class="hint">Avisos de todo el país; se guardan los de tus zonas.</span>
+                <details class="pc-more"><summary>Ajustes</summary>
+                  <div class="field"><label for="cBuZonas">Zonas que me sirven</label><textarea class="input" id="cBuZonas" data-chips data-placeholder="Zona + Enter"></textarea></div>
+                  <div class="field" style="max-width:220px"><label for="cBuPages">Páginas por búsqueda</label><input class="input" id="cBuPages" type="number" min="1" max="5"></div>
+                </details></div>
+            </div>
+            <div class="portal-card"><label class="switch"><input type="checkbox" id="cZjOn"><span class="sw"></span></label><div class="pc-main"><b>ZonaJobs</b><span class="hint">Mismas zonas que Bumeran.</span></div></div>
+            <div class="portal-card"><label class="switch"><input type="checkbox" id="cBjOn"><span class="sw"></span></label><div class="pc-main"><b>BuscoJobs</b><span class="hint">Mismas zonas que Bumeran.</span></div></div>
+            <div class="portal-card"><label class="switch"><input type="checkbox" id="cTaOn"><span class="sw"></span></label><div class="pc-main"><b>Talent.com</b><span class="hint">Unas 11 ofertas por búsqueda.</span></div></div>
+            <div class="portal-card">
+              <label class="switch"><input type="checkbox" id="cJbOn"><span class="sw"></span></label>
+              <div class="pc-main"><b>Jooble</b><span class="hint">Reúne avisos de muchos sitios. Necesita una clave gratuita.</span>
+                <details class="pc-more"><summary>Clave de Jooble</summary>
+                  <div class="field"><input class="input" id="cJbKey" type="password" autocomplete="new-password" placeholder="Pegala acá" aria-label="Clave de la API de Jooble">
+                    <p class="hint" id="jbKeyHint"></p>
+                    <p class="hint">Pedila en jooble.org/api/about dejando tu correo. Se guarda solo en tu PC.</p></div></details></div>
+            </div>
+            <div class="portal-card warn">
+              <label class="switch"><input type="checkbox" id="cLiOn"><span class="sw"></span></label>
+              <div class="pc-main"><b>LinkedIn</b><span class="hint">Lista pública. Sus términos no permiten la lectura automática: usalo con moderación.</span></div>
+            </div>
+          </div>
+          <div class="field" style="margin-top:14px">
+            <label for="cRss">Otros sitios (feeds RSS)</label>
+            <textarea class="input" id="cRss" data-chips data-placeholder="Pegá una dirección y apretá Enter"></textarea>
+            <p class="hint">Para sitios que publican un feed de empleos.</p>
+          </div>
+        </section>
 
-      <label class="seg-option"><input type="checkbox" id="cZjOn"> Buscar en ZonaJobs <span class="hint">(mismos puestos y zonas que Bumeran por defecto)</span></label>
+        <section class="st-pane" data-pane="empresas" hidden>
+          <h3>Empresas de interés</h3>
+          <p class="hint">Sus ofertas suman puntos. Si agregás el link de su página de empleos, también se revisa en cada búsqueda.</p>
+          <textarea class="input" id="cEmp" data-companies></textarea>
+        </section>
 
-      <label class="seg-option"><input type="checkbox" id="cBjOn"> Buscar en BuscoJobs <span class="hint">(mismos puestos y zonas que Bumeran por defecto)</span></label>
+        <section class="st-pane" data-pane="gmail" hidden>
+          <h3>Alertas por Gmail</h3>
+          <p class="hint">Los portales te mandan por mail las ofertas de tus alertas. Acá se leen en modo lectura: no se marca ni se borra nada.</p>
+          <label class="switch-row"><span class="switch"><input type="checkbox" id="cGmOn"><span class="sw"></span></span> Leer mis alertas de empleo</label>
+          <div class="cols-2">
+            <div class="field"><label for="cGmEmail">Cuenta de Gmail</label><input class="input" id="cGmEmail" type="email" autocomplete="off"></div>
+            <div class="field"><label for="cGmDays">Mails de los últimos (días)</label><input class="input" id="cGmDays" type="number" min="1" max="60"></div>
+          </div>
+          <div class="field">
+            <label for="cGmPass">Contraseña de aplicación</label>
+            <input class="input" id="cGmPass" type="password" autocomplete="new-password" placeholder="16 letras, la creás en tu cuenta de Google">
+            <p class="hint" id="gmPassHint"></p>
+          </div>
+          <div class="field">
+            <label for="cGmSenders">Portales que me escriben</label>
+            <textarea class="input" id="cGmSenders" data-chips data-placeholder="Ej: computrabajo + Enter"></textarea>
+            <p class="hint">Una palabra del remitente de cada portal.</p>
+          </div>
+          <details class="st-card help"><summary>Cómo conectarlo paso a paso</summary>
+            <ol><li>En tu cuenta de Google activá la verificación en 2 pasos.</li><li>Entrá a myaccount.google.com/apppasswords y creá una contraseña de aplicación.</li><li>Pegala arriba.</li><li>En cada portal creá alertas de empleo con este mismo correo.</li></ol></details>
+        </section>
 
-      <label class="seg-option"><input type="checkbox" id="cJbOn"> Buscar en Jooble <span class="hint">(reúne avisos de muchos sitios; necesita una clave gratuita)</span></label>
-      <div class="field">
-        <label for="cJbKey">Clave de la API de Jooble</label>
-        <input class="input" id="cJbKey" type="password" autocomplete="new-password" placeholder="Pegala acá">
-        <p class="hint" id="jbKeyHint"></p>
-        <p class="hint">Cómo se pide: entrá a jooble.org/api/about, dejá tu mail y te llega la clave. Se guarda solo en esta PC.</p>
-      </div>
+        <section class="st-pane" data-pane="mensajes" hidden>
+          <h3>Mensajes de postulación</h3>
+          <p class="hint">Un texto por CV. Variables: <code>{puesto}</code> <code>{empresa}</code> <code>{cv}</code> <code>{nombre}</code> <code>{telefono}</code></p>
+          <div id="cPTemplates" class="st-stack"></div>
+        </section>
 
-      <label class="seg-option"><input type="checkbox" id="cTaOn"> Buscar en Talent.com <span class="hint">(unas 11 ofertas por búsqueda)</span></label>
-      <label class="seg-option"><input type="checkbox" id="cLiOn"> Buscar en LinkedIn <span class="hint">(lista pública; sus términos no permiten la lectura automática, usalo con moderación)</span></label>
+        <section class="st-pane" data-pane="auto" hidden>
+          <h3>Automático y avisos</h3>
+          <label class="switch-row"><span class="switch"><input type="checkbox" id="cAutoOn"><span class="sw"></span></span> Buscar solo mientras el programa esté abierto</label>
+          <div class="field" style="max-width:240px"><label for="cAutoH">Cada cuántas horas</label><input class="input" id="cAutoH" type="number" min="1" max="48"></div>
+          <div class="cols-2">
+            <div class="field"><label for="cAvScore">Avisarme de ofertas nuevas con puntaje desde</label><input class="input" id="cAvScore" type="number" min="30" max="100"></div>
+            <div class="field"><label for="cAvDays">Recordarme hacer seguimiento a los (días)</label><input class="input" id="cAvDays" type="number" min="1" max="60"></div>
+          </div>
+        </section>
 
-      <h3 class="section-title">Búsqueda automática</h3>
-      <label class="seg-option"><input type="checkbox" id="cAutoOn"> Buscar sola mientras el programa esté abierto</label>
-      <div class="field" style="max-width:240px"><label for="cAutoH">Cada cuántas horas</label><input class="input" id="cAutoH" type="number" min="1" max="48"></div>
+        <section class="st-pane" data-pane="datos" hidden>
+          <h3>Mis datos</h3>
+          <div class="st-card"><div><b>Ofertas de ejemplo</b><p class="hint">Carga unas ofertas de prueba para ver cómo funciona.</p></div><button type="button" class="btn" id="btnDemo">Cargar</button></div>
+          <div class="st-card"><div><b>Recalcular puntajes</b><p class="hint">Hacelo después de cambiar palabras, lugares o penalizaciones.</p></div><button type="button" class="btn" id="btnRecalc">Recalcular</button></div>
+          <div class="st-card danger"><div><b>Vaciar todas las ofertas</b><p class="hint">Borra la lista completa. No se puede deshacer.</p></div><button type="button" class="btn btn-danger" id="btnWipe">Vaciar</button></div>
+        </section>
 
-      <h3 class="section-title">Avisos</h3>
-      <div class="cols-2">
-        <div class="field"><label for="cAvScore">Avisarme de ofertas nuevas con puntaje desde</label><input class="input" id="cAvScore" type="number" min="30" max="100"></div>
-        <div class="field"><label for="cAvDays">Recordarme hacer seguimiento a los (días)</label><input class="input" id="cAvDays" type="number" min="1" max="60"></div>
-      </div>
-
-      <h3 class="section-title">Postulación</h3>
-      <div class="cols-2">
-        <div class="field"><label for="cPName">Mi nombre completo</label><input class="input" id="cPName" autocomplete="off"></div>
-        <div class="field"><label for="cPPhone">Teléfono (opcional)</label><input class="input" id="cPPhone" autocomplete="off"></div>
-      </div>
-      <div id="cPTemplates" class="dlg-body" style="padding:0;overflow:visible;max-height:none"></div>
-      <p class="hint">Variables disponibles: {puesto}, {empresa}, {cv}, {nombre}, {telefono}. Tus datos quedan en la carpeta data de tu PC.</p>
-
-      <h3 class="section-title">Alertas por Gmail</h3>
-      <label class="seg-option"><input type="checkbox" id="cGmOn"> Leer las alertas de empleo de mi Gmail</label>
-      <div class="cols-2">
-        <div class="field"><label for="cGmEmail">Cuenta de Gmail</label><input class="input" id="cGmEmail" type="email" autocomplete="off"></div>
-        <div class="field"><label for="cGmDays">Mails de los últimos (días)</label><input class="input" id="cGmDays" type="number" min="1" max="60"></div>
-      </div>
-      <div class="field">
-        <label for="cGmPass">Contraseña de aplicación</label>
-        <input class="input" id="cGmPass" type="password" autocomplete="new-password" placeholder="16 letras, la creás en tu cuenta de Google">
-        <p class="hint" id="gmPassHint"></p>
-      </div>
-      <div class="field">
-        <label for="cGmSenders">Portales que me escriben</label>
-        <textarea class="input" id="cGmSenders" rows="3"></textarea>
-        <p class="hint">Una palabra por línea, tal como aparece en el remitente (ej: computrabajo). Solo se leen mails de estos remitentes, en modo lectura: no se marca ni se borra nada.</p>
-      </div>
-      <p class="hint">Cómo se arma: 1) En Google, activá la verificación en 2 pasos. 2) Entrá a myaccount.google.com/apppasswords y creá una contraseña. 3) Pegala acá. 4) En cada portal creá alertas de empleo con este mismo mail.</p>
-
-      <h3 class="section-title">Fuentes</h3>
-      <div class="field">
-        <label for="cRss">Feeds RSS de empleo</label>
-        <textarea class="input" id="cRss" rows="3" placeholder="https://sitio.com/empleos/feed.xml"></textarea>
-        <p class="hint">Una dirección por línea. El botón Buscar ofertas los lee todos.</p>
-      </div>
-
-      <h3 class="section-title">Palabras clave por CV</h3>
-      <p class="hint">Formato <b>palabra: peso</b>, una por línea. Mayor peso, más puntos. En el título valen el doble.</p>
-      <div id="cProfiles" class="dlg-body" style="padding:0;overflow:visible;max-height:none"></div>
-
-      <h3 class="section-title">Penalizaciones</h3>
-      <div class="field">
-        <textarea class="input" id="cPen" rows="5" aria-label="Penalizaciones"></textarea>
-        <p class="hint">Formato <b>palabra: puntos</b> con número negativo. Ejemplo: senior: -15</p>
-      </div>
-
-      <h3 class="section-title">Datos</h3>
-      <div class="job-actions">
-        <button type="button" class="btn btn-sm" id="btnDemo">Cargar ofertas de ejemplo</button>
-        <button type="button" class="btn btn-sm" id="btnRecalc">Recalcular puntajes</button>
-        <button type="button" class="btn btn-sm btn-danger" id="btnWipe">Vaciar todas las ofertas</button>
       </div>
     </div>
     <div class="dlg-foot">
-      <span></span>
+      <span class="hint" id="stDirty"></span>
       <div class="group">
         <button type="button" class="btn" data-close>Cancelar</button>
-        <button type="submit" class="btn btn-primary">Guardar y recalcular</button>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
       </div>
     </div>
   </form>
