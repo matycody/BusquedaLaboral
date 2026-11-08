@@ -65,6 +65,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/status":
             st = search.load_state()
             return self._json({"last_search": st.get("last_search"), "last_added": st.get("last_added", 0)})
+        if u.path == "/api/jooble/status":
+            return self._json({"key_set": bool(config.get_secret("jooble_key", "JOOBLE_API_KEY"))})
         if u.path == "/api/gmail/status":
             return self._json({"password_set": bool(config.get_secret("gmail_password", "GMAIL_APP_PASSWORD"))})
         # archivos estáticos
@@ -89,6 +91,9 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/search":
             res = search.run_search()
             return self._json(res if res is not None else {"agregadas": 0, "aviso": "Ya hay una búsqueda en curso. Esperá a que termine."})
+        if u.path == "/api/jooble/key":
+            config.set_secret("jooble_key", "".join(str(body.get("key", "")).split()))
+            return self._json({"key_set": bool(config.get_secret("jooble_key"))})
         if u.path == "/api/gmail/password":
             config.set_secret("gmail_password", "".join(str(body.get("password", "")).split()))
             return self._json({"password_set": bool(config.get_secret("gmail_password"))})

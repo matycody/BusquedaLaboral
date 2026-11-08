@@ -151,6 +151,14 @@
 
       <label class="seg-option"><input type="checkbox" id="cBjOn"> Buscar en BuscoJobs <span class="hint">(mismos puestos y zonas que Bumeran por defecto)</span></label>
 
+      <label class="seg-option"><input type="checkbox" id="cJbOn"> Buscar en Jooble <span class="hint">(reúne avisos de muchos sitios; necesita una clave gratuita)</span></label>
+      <div class="field">
+        <label for="cJbKey">Clave de la API de Jooble</label>
+        <input class="input" id="cJbKey" type="password" autocomplete="new-password" placeholder="Pegala acá">
+        <p class="hint" id="jbKeyHint"></p>
+        <p class="hint">Cómo se pide: entrá a jooble.org/api/about, dejá tu mail y te llega la clave. Se guarda solo en esta PC.</p>
+      </div>
+
       <h3 class="section-title">Búsqueda automática</h3>
       <label class="seg-option"><input type="checkbox" id="cAutoOn"> Buscar sola mientras el programa esté abierto</label>
       <div class="field" style="max-width:240px"><label for="cAutoH">Cada cuántas horas</label><input class="input" id="cAutoH" type="number" min="1" max="48"></div>

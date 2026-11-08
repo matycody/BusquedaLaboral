@@ -487,6 +487,17 @@ function linesToObj(text) {
 const objToLines = (o) => Object.entries(o).map(([k, v]) => `${k}: ${v}`).join("\n");
 const textToList = (t) => t.split("\n").map((s) => s.trim()).filter(Boolean);
 
+async function refreshJoobleHint() {
+  try {
+    const st = await api("/api/jooble/status");
+    $("jbKeyHint").textContent = st.key_set
+      ? "Hay una clave guardada en esta PC. Escribí otra solo si querés cambiarla."
+      : "Todavía no hay clave guardada.";
+  } catch (e) {
+    $("jbKeyHint").textContent = "";
+  }
+}
+
 async function refreshGmailHint() {
   try {
     const st = await api("/api/gmail/status");
@@ -533,6 +544,9 @@ function openConfig() {
   $("cBuPages").value = bu.max_pages || 2;
   $("cBuZonas").value = (bu.zonas || []).join("\n");
   $("cBuQ").value = (bu.queries || []).join("\n");
+  $("cJbOn").checked = !!((c.portales || {}).jooble || {}).enabled;
+  $("cJbKey").value = "";
+  refreshJoobleHint();
   $("cBjOn").checked = !!((c.portales || {}).buscojobs || {}).enabled;
   $("cZjOn").checked = !!((c.portales || {}).zonajobs || {}).enabled;
   $("cEmp").value = (c.empresas || []).map((e) => (e.url ? `${e.name} | ${e.url}` : e.name)).join("\n");
@@ -568,6 +582,7 @@ async function saveConfig(ev) {
       queries: textToList($("cBuQ").value),
     },
   };
+  cfg.portales.jooble = { ...(cfg.portales.jooble || {}), enabled: $("cJbOn").checked };
   cfg.portales.buscojobs = { ...(cfg.portales.buscojobs || {}), enabled: $("cBjOn").checked };
   cfg.portales.zonajobs = { ...(cfg.portales.zonajobs || {}), enabled: $("cZjOn").checked };
   cfg.empresas = textToList($("cEmp").value).map((l) => {
@@ -589,6 +604,7 @@ async function saveConfig(ev) {
     senders: textToList($("cGmSenders").value),
   };
   try {
+    if ($("cJbKey").value.trim()) await api("/api/jooble/key", "POST", { key: $("cJbKey").value });
     if ($("cGmPass").value.trim()) await api("/api/gmail/password", "POST", { password: $("cGmPass").value });
     $("cGmPass").value = "";
     await api("/api/config", "POST", cfg);
