@@ -81,7 +81,8 @@ def run_search():
         portales = cfg.get("portales", {})
         busquedas = cfg.get("busquedas") or []
         activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("PortalEmpleo", portalempleo), ("LinkedIn", linkedin))
-                   if portales.get(name.lower(), {}).get("enabled") and busquedas]
+                   if portales.get(name.lower(), {}).get("enabled") and busquedas
+                   and (name != "Jooble" or config.get_secret("jooble_key", "JOOBLE_API_KEY"))]
         gm = cfg.get("gmail", {})
         gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")
         use_gm = bool(gm.get("enabled") and gm.get("email") and gm_pass)

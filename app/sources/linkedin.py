@@ -84,7 +84,6 @@ def fetch(conf, pause=3.0):
     blocked = False
     for q in conf.get("queries", []):
         if blocked:
-            report.append({"busqueda": q, "encontradas": 0, "nota": "Omitida: LinkedIn bloqueó el acceso."})
             continue
         found, note = 0, ""
         for page in range(int(conf.get("max_pages", 1))):
