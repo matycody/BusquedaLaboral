@@ -136,7 +136,7 @@ function renderSourceFilter() {
 }
 
 function filtersActive() {
-  return !!(state.src || $("fOnlyEmp").checked || $("fQ").value.trim() || $("fLoc").value.trim() || state.cv || Number($("fMin").value));
+  return !!(state.src || $("fOnlyEmp").checked || $("fQ").value.trim() || $("fLoc").value.trim() || state.cv || Number($("fMin").value) !== 15);
 }
 
 function renderCvFilter() {
@@ -481,7 +481,7 @@ function openPost(id) {
   const tpls = post.plantillas || {};
   const tpl = tpls[j.cv] ?? Object.values(tpls)[0] ?? "Hola, me postulo para el puesto de {puesto}.\n\nSaludos,\n{nombre}";
   const vars = { puesto: j.title, empresa: j.company && j.company !== "Confidencial" ? j.company : "su empresa", cv: cvLabel(j.cv), nombre: post.nombre || "", telefono: post.telefono || "" };
-  $("postInfo").textContent = `Usá el ${cvLabel(j.cv)} para esta oferta (puntaje ${j.score}).` + (post.nombre ? "" : " Completá tu nombre en Configuración → Postulación para que salga en el mensaje.");
+  $("postInfo").textContent = `Usá el ${cvLabel(j.cv)} para esta oferta (puntaje ${j.score}).` + (state.cfg.profiles?.[j.cv]?.cv_file ? ` Archivo: ${state.cfg.profiles[j.cv].cv_file}.` : "") + (post.nombre ? "" : " Completá tu nombre en Configuración → Postulación para que salga en el mensaje.");
   $("pSubject").value = `Postulación: ${j.title}`;
   $("pBody").value = fill(tpl, vars).replace(/\n{3,}/g, "\n\n").trim();
   $("pOpen").disabled = !(j.sources[0] && j.sources[0].url);
@@ -685,7 +685,7 @@ async function saveOffer(ev) {
 function clearFilters() {
   $("fQ").value = "";
   $("fLoc").value = "";
-  $("fMin").value = "0";
+  $("fMin").value = "15";
   $("fOnlyEmp").checked = false;
   state.cv = "";
   state.src = "";
@@ -904,27 +904,96 @@ async function init() {
 init();
 
 
-/* ---------- elección de rubro ---------- */
+/* ---------- registro inicial / perfil ---------- */
+let wzStep = 1;
+const WZ_STEPS = 4;
+let wzPresets = [];
+function wzShow(n) {
+  wzStep = Math.max(1, Math.min(WZ_STEPS, n));
+  document.querySelectorAll("#formSetup [data-step]").forEach((el) => (el.hidden = Number(el.dataset.step) !== wzStep));
+  $("wzStep").textContent = `Paso ${wzStep} de ${WZ_STEPS}`;
+  $("wBack").hidden = wzStep === 1;
+  $("wNext").hidden = wzStep === WZ_STEPS;
+  $("wDone").hidden = wzStep !== WZ_STEPS;
+  if (wzStep === WZ_STEPS) wzRenderCvs();
+}
+function wzRubros() {
+  return [...document.querySelectorAll("#setupRubros input:checked")].map((i) => i.value);
+}
+function wzRenderCvs() {
+  const rubros = wzRubros();
+  const labels = Object.fromEntries(wzPresets.map((r) => [r.key, r.label]));
+  const current = state.cfg.profiles || {};
+  $("wCvs").innerHTML = (rubros.length ? rubros : ["general"])
+    .map((k) => `<div class="field"><label for="wcv-${esc(k)}">CV de ${esc(labels[k] || "tu perfil")}${current[k]?.cv_file ? ` <span class="hint">(ya cargado: ${esc(current[k].cv_file)})</span>` : ""}</label>
+      <input class="input" type="file" id="wcv-${esc(k)}" data-cvkey="${esc(k)}" accept=".pdf,.doc,.docx,.odt,.txt"></div>`)
+    .join("");
+}
 async function openSetup() {
-  const list = await api("/api/presets");
-  $("setupRubros").innerHTML = list
-    .map((r) => `<label class="seg-option"><input type="checkbox" value="${esc(r.key)}"> <span><b>${esc(r.label)}</b><br><span class="hint">${esc(r.queries.slice(0, 3).join(", "))}…</span></span></label>`)
+  wzPresets = await api("/api/presets");
+  const c = state.cfg, per = c.perfil || {}, post = c.postulacion || {};
+  const mine = new Set(Object.keys(c.profiles || {}));
+  $("setupRubros").innerHTML = wzPresets
+    .map((r) => `<label class="seg-option"><input type="checkbox" value="${esc(r.key)}" ${c.setup_done && mine.has(r.key) ? "checked" : ""}> <span><b>${esc(r.label)}</b><br><span class="hint">${esc(r.queries.slice(0, 3).join(", "))}…</span></span></label>`)
     .join("");
   $("setupExtra").value = "";
+  $("wNombre").value = per.nombre || post.nombre || "";
+  $("wEmail").value = per.email || "";
+  $("wTel").value = per.telefono || post.telefono || "";
+  $("wLocalidad").value = per.localidad || "";
+  $("wModalidad").value = per.modalidad || "ambos";
+  $("wZonas").value = (per.zonas || ["Buenos Aires", "Capital Federal", "CABA"]).join(", ");
+  $("wNivel").value = per.nivel || "sin";
+  $("wCancel").hidden = !c.setup_done;
+  wzShow(1);
   openDialog($("dSetup"));
+}
+function fileToBase64(file) {
+  return new Promise((ok, fail) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(",")[1] || "");
+    r.onerror = () => fail(new Error("No se pudo leer el archivo"));
+    r.readAsDataURL(file);
+  });
+}
+function wzNext() {
+  if (wzStep === 1) {
+    if (!$("wNombre").value.trim()) { toast("Escribí tu nombre."); return; }
+    const em = $("wEmail").value.trim();
+    if (em && !/^\S+@\S+\.\S+$/.test(em)) { toast("El correo no parece válido."); return; }
+  }
+  if (wzStep === 2 && !wzRubros().length && !textToList($("setupExtra").value).length) {
+    toast("Elegí al menos un rubro o escribí un puesto.");
+    return;
+  }
+  wzShow(wzStep + 1);
 }
 async function saveSetup(ev) {
   ev.preventDefault();
-  const rubros = [...document.querySelectorAll("#setupRubros input:checked")].map((i) => i.value);
-  const extra = textToList($("setupExtra").value);
-  if (!rubros.length && !extra.length) { toast("Elegí al menos un rubro o escribí un puesto."); return; }
+  const body = {
+    rubros: wzRubros(),
+    extra: textToList($("setupExtra").value),
+    perfil: {
+      nombre: $("wNombre").value.trim(), email: $("wEmail").value.trim(), telefono: $("wTel").value.trim(),
+      localidad: $("wLocalidad").value.trim(), zonas: $("wZonas").value, nivel: $("wNivel").value, modalidad: $("wModalidad").value,
+    },
+  };
   try {
-    await api("/api/setup", "POST", { rubros, extra });
+    await api("/api/setup", "POST", body);
+    for (const input of document.querySelectorAll("#wCvs input[type=file]")) {
+      const f = input.files[0];
+      if (!f) continue;
+      const key = input.dataset.cvkey === "general" ? "general" : input.dataset.cvkey;
+      await api("/api/cv", "POST", { profile: key, filename: f.name, data: await fileToBase64(f) });
+    }
     $("dSetup").close();
     state.cfg = await api("/api/config");
+    renderCvFilter();
     await loadJobs();
-    toast("Listo. Apretá Buscar ofertas para traer los primeros avisos.");
+    toast("Perfil guardado. Apretá Buscar ofertas para traer los primeros avisos.");
   } catch (e) { toast("No se pudo guardar: " + e.message); }
 }
 $("formSetup").addEventListener("submit", saveSetup);
+$("wNext").addEventListener("click", wzNext);
+$("wBack").addEventListener("click", () => wzShow(wzStep - 1));
 $("btnRubro").addEventListener("click", () => { $("dConfig").close(); openSetup(); });

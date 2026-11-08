@@ -71,3 +71,9 @@ La primera vez que se abre la app pregunta qué trabajo buscás (salud, construc
 ## Mientras busca
 
 Aparece un cartel con el avance por fuente (portales, empresas, Gmail, guardado). Las alertas de Computrabajo que llegan por Gmail ahora separan puesto, empresa, lugar y antigüedad.
+
+## Registro inicial (perfil)
+
+La primera vez se abre un asistente de 4 pasos: datos personales (nombre, correo, teléfono), rubro y puestos, zona/modalidad/nivel de experiencia y CV (opcional, se guarda en `data/cvs`). De ahí salen los puestos buscados, las zonas que sirven, las penalizaciones por nivel y los datos de las postulaciones. Se puede repetir desde Configuración → "Editar mi perfil y rubro".
+
+Las ofertas que no nombran nada de lo que buscás se limitan a 10 puntos y quedan ocultas con el filtro "Relevantes" (el de por defecto); "Todas" las muestra.

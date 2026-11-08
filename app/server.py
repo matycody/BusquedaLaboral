@@ -106,11 +106,38 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/clear":
             return self._json(db.clear())
         if u.path == "/api/setup":
-            cfg = presets.apply(config.load(), body.get("rubros") or [], body.get("extra") or [])
+            base = config.load()
+            had = base.get("setup_done")
+            base.pop("setup_done", None)
+            cfg = presets.apply(base, body.get("rubros") or [], body.get("extra") or [])
             if not cfg.get("setup_done"):
-                return self._json({"error": "Elegí al menos un rubro o escribí un puesto"}, 400)
+                if had:
+                    cfg["setup_done"] = True  # solo cambió los datos personales
+                else:
+                    return self._json({"error": "Elegí al menos un rubro o escribí un puesto"}, 400)
+            cfg = presets.apply_perfil(cfg, body.get("perfil"))
             config.save(cfg)
             return self._json(db.recalc())
+        if u.path == "/api/cv":
+            import base64
+            prof = re.sub(r"\W", "", str(body.get("profile", "")))
+            ext = os.path.splitext(str(body.get("filename", "")))[1].lower()
+            if not prof or ext not in (".pdf", ".doc", ".docx", ".odt", ".txt"):
+                return self._json({"error": "Subí un CV en PDF, Word o texto"}, 400)
+            try:
+                raw = base64.b64decode(body.get("data", ""), validate=False)
+            except Exception:
+                return self._json({"error": "Archivo ilegible"}, 400)
+            if not raw or len(raw) > 5 * 1024 * 1024:
+                return self._json({"error": "El CV debe pesar hasta 5 MB"}, 400)
+            os.makedirs(os.path.join(config.DATA_DIR, "cvs"), exist_ok=True)
+            with open(os.path.join(config.DATA_DIR, "cvs", prof + ext), "wb") as f:
+                f.write(raw)
+            cfg = config.load()
+            if prof in cfg.get("profiles", {}):
+                cfg["profiles"][prof]["cv_file"] = str(body.get("filename"))[:120]
+                config.save(cfg)
+            return self._json({"ok": True})
         if u.path == "/api/config":
             config.save(body)
             return self._json(db.recalc())

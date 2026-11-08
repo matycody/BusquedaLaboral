@@ -24,6 +24,9 @@ def _profile_score(profile, title, desc):
     return min(100.0, raw / (total_possible * 0.45) * 100)
 
 
+NO_MATCH_CAP = 10
+
+
 def score_job(job, cfg):
     title = norm(job.get("title"))
     desc = norm(job.get("description"))
@@ -54,6 +57,8 @@ def score_job(job, cfg):
         comp_bonus = cfg.get("company_bonus", 10)
 
     score = max(0, min(100, round(base * 0.82 + loc_bonus + rec_bonus + comp_bonus + pen)))
+    if base == 0:  # no nombra nada de lo que buscás: nunca debería verse como buena opción
+        score = min(score, NO_MATCH_CAP)
     return score, best_cv, {k: round(v) for k, v in per_cv.items()}
 
 
@@ -127,6 +132,9 @@ def explain(job, cfg):
     for word, p in cfg.get("penalize", {}).items():
         if norm(word) in title or norm(word) in desc:
             items.append({"label": f'Menciona "{word}"', "points": p})
+    suma = sum(i["points"] for i in items)
+    if score < max(0, min(100, suma)):
+        items.append({"label": f"No menciona nada de lo que buscás: el puntaje se limita a {NO_MATCH_CAP}", "points": score - max(0, min(100, suma))})
     return {"items": items, "total": score}
 
 

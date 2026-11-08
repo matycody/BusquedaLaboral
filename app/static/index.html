@@ -43,7 +43,8 @@
       <label class="pill"><span>Fuente</span><select id="fSrc"><option value="">Todas</option></select></label>
       <label class="pill"><span>Puntaje</span>
         <select id="fMin">
-          <option value="0">Todos</option>
+          <option value="15" selected>Relevantes</option>
+          <option value="0">Todas (con las que no tienen relación)</option>
           <option value="40">40 o más</option>
           <option value="60">60 o más</option>
           <option value="75">75 o más</option>
@@ -119,13 +120,45 @@
 
 <dialog id="dSetup">
   <form method="dialog" id="formSetup">
-    <div class="dlg-head"><h2>¿Qué trabajo buscás?</h2></div>
+    <div class="dlg-head"><h2 id="wzTitle">Creá tu perfil</h2><span class="hint" id="wzStep"></span></div>
     <div class="dlg-body">
-      <p class="hint">Elegí uno o más rubros. Se arman solos los puestos a buscar en todos los portales y el puntaje de cada oferta. Después lo podés cambiar en Configuración.</p>
-      <div id="setupRubros" class="setup-grid"></div>
-      <div class="field"><label for="setupExtra">Otros puestos (uno por línea, opcional)</label><textarea class="input" id="setupExtra" rows="3" placeholder="Ej: operador de CNC"></textarea></div>
+      <section data-step="1">
+        <p class="hint">Estos datos se guardan solo en tu computadora y se usan para armar tus postulaciones.</p>
+        <div class="field"><label for="wNombre">Nombre y apellido</label><input class="input" id="wNombre" autocomplete="name"></div>
+        <div class="cols-2">
+          <div class="field"><label for="wEmail">Correo</label><input class="input" id="wEmail" type="email" autocomplete="email"></div>
+          <div class="field"><label for="wTel">Teléfono</label><input class="input" id="wTel" type="tel" autocomplete="tel"></div>
+        </div>
+      </section>
+      <section data-step="2" hidden>
+        <p class="hint">¿Qué trabajo buscás? Elegí uno o más rubros: de ahí salen los puestos que se buscan en todos los portales y el puntaje de cada oferta.</p>
+        <div id="setupRubros" class="setup-grid"></div>
+        <div class="field"><label for="setupExtra">Otros puestos (uno por línea, opcional)</label><textarea class="input" id="setupExtra" rows="2" placeholder="Ej: operador de CNC"></textarea></div>
+      </section>
+      <section data-step="3" hidden>
+        <div class="cols-2">
+          <div class="field"><label for="wLocalidad">Tu localidad</label><input class="input" id="wLocalidad" placeholder="Ej: Claypole"></div>
+          <div class="field"><label for="wModalidad">Modalidad</label>
+            <select class="input" id="wModalidad"><option value="ambos">Presencial o remoto</option><option value="presencial">Solo presencial</option><option value="remoto">Solo remoto</option></select></div>
+        </div>
+        <div class="field"><label for="wZonas">Zonas donde podés trabajar (separadas por coma)</label><input class="input" id="wZonas" placeholder="Buenos Aires, Capital Federal, CABA"><p class="hint">Las ofertas de otras zonas se esconden o bajan de puntaje.</p></div>
+        <div class="field"><label for="wNivel">Tu experiencia</label>
+          <select class="input" id="wNivel"><option value="sin">Sin experiencia / primer empleo</option><option value="algo">Con algo de experiencia</option><option value="mucha">Con experiencia</option></select>
+          <p class="hint">Sirve para no mostrarte primero puestos senior o que piden años de experiencia.</p></div>
+      </section>
+      <section data-step="4" hidden>
+        <p class="hint">Subí tu CV (PDF, Word o texto, hasta 5 MB). Es opcional: queda guardado en tu PC y te lo recuerda al postularte.</p>
+        <div id="wCvs"></div>
+      </section>
     </div>
-    <div class="dlg-foot"><span></span><div class="group"><button type="button" class="btn" data-close>Ahora no</button><button type="submit" class="btn btn-primary">Empezar</button></div></div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-quiet" data-close id="wCancel">Ahora no</button>
+      <div class="group">
+        <button type="button" class="btn" id="wBack">Atrás</button>
+        <button type="button" class="btn btn-primary" id="wNext">Siguiente</button>
+        <button type="submit" class="btn btn-primary" id="wDone" hidden>Terminar</button>
+      </div>
+    </div>
   </form>
 </dialog>
 
@@ -152,7 +185,7 @@
       <div class="field">
         <label for="cBusq">Puestos que busco (se usan en todos los portales)</label>
         <textarea class="input" id="cBusq" rows="5"></textarea>
-        <p class="hint">Uno por línea. <button type="button" class="btn btn-quiet" id="btnRubro">Cambiar de rubro</button></p>
+        <p class="hint">Uno por línea. <button type="button" class="btn btn-quiet" id="btnRubro">Editar mi perfil y rubro</button></p>
       </div>
 
       <label class="seg-option"><input type="checkbox" id="cCtOn"> Buscar en Computrabajo</label>

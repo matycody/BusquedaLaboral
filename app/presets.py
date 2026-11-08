@@ -83,6 +83,9 @@ def apply(cfg, rubros, extra=None):
             if q not in queries:
                 queries.append(q)
         profiles[key] = {"label": "CV " + p["label"], "keywords": dict(p["keywords"])}
+        old = (cfg.get("profiles") or {}).get(key, {}).get("cv_file")
+        if old:
+            profiles[key]["cv_file"] = old
         plantillas.setdefault(key, GENERIC_TEMPLATE)
     for q in (extra or []):
         q = q.strip()
@@ -97,4 +100,46 @@ def apply(cfg, rubros, extra=None):
     cfg["profiles"] = profiles
     cfg.setdefault("postulacion", {})["plantillas"] = plantillas
     cfg["setup_done"] = True
+    return cfg
+
+
+NIVELES = {
+    "sin": {"label": "Sin experiencia / primer empleo", "penalize": {"senior": -15, "semi senior": -8, "ssr": -8, "lider": -10, "gerente": -20, "5 años": -12, "3 años": -6}},
+    "algo": {"label": "Con algo de experiencia", "penalize": {"senior": -10, "gerente": -20, "lider": -6, "5 años": -8}},
+    "mucha": {"label": "Con experiencia", "penalize": {"gerente": -10}},
+}
+
+
+def _lista(v):
+    if isinstance(v, str):
+        v = v.replace(",", "\n").split("\n")
+    return [x.strip() for x in (v or []) if x.strip()]
+
+
+def apply_perfil(cfg, perfil):
+    """Datos personales, zona, nivel y modalidad del registro inicial."""
+    perfil = perfil or {}
+    keep = {k: str(perfil.get(k, "")).strip() for k in ("nombre", "email", "telefono", "localidad", "nivel", "modalidad")}
+    keep["zonas"] = _lista(perfil.get("zonas"))
+    cfg["perfil"] = {**(cfg.get("perfil") or {}), **keep}
+    post = cfg.setdefault("postulacion", {})
+    post["nombre"], post["telefono"] = keep["nombre"], keep["telefono"]
+    if keep["email"]:
+        cfg.setdefault("gmail", {})["email"] = cfg.get("gmail", {}).get("email") or keep["email"]
+    zonas = [z.lower() for z in keep["zonas"]]
+    if keep["localidad"]:
+        zonas.insert(0, keep["localidad"].lower())
+    mod = keep["modalidad"] or "ambos"
+    oks = [] if mod == "remoto" else zonas
+    if mod in ("remoto", "ambos"):
+        oks = oks + ["remoto"]
+    if oks:
+        cfg["locations_ok"] = list(dict.fromkeys(oks))
+        cfg["location"] = zonas[0] if zonas and mod != "remoto" else ""
+        for name in ("bumeran", "zonajobs", "buscojobs"):
+            if name in cfg.get("portales", {}):
+                cfg["portales"][name]["zonas"] = list(dict.fromkeys(zonas + (["remoto"] if mod != "presencial" else [])))
+    nivel = NIVELES.get(keep["nivel"])
+    if nivel:
+        cfg["penalize"] = dict(nivel["penalize"])
     return cfg
