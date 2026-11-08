@@ -228,7 +228,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(db.upsert_jobs([body]))
         m = re.fullmatch(r"/api/jobs/(\d+)", u.path)
         if m:
-            return self._json(db.update_job(int(m.group(1)), body.get("status"), body.get("notes")))
+            return self._json(db.update_job(int(m.group(1)), body.get("status"), body.get("notes"), body.get("outcome"), body.get("followup")))
         self.send_error(404)
 
 

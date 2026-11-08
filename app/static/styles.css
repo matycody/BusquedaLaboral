@@ -549,3 +549,11 @@ dialog.settings .dlg-head .hint { margin: 0; }
   #applyAsk { bottom: max(12px, env(safe-area-inset-bottom)); }
   #searchFloat { right: 8px; left: 8px; width: auto; bottom: max(8px, env(safe-area-inset-bottom)); }
 }
+
+.track-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.track-row .field { min-width: 220px; }
+.track-summary { display: flex; flex-wrap: wrap; gap: 8px; }
+.ts { display: inline-flex; align-items: baseline; gap: 6px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: 12.5px; color: var(--ink-2); }
+.ts b { font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ts.warn { background: #fff7e6; border-color: #f0dcae; }
+.ts.ok { background: #eef6f1; border-color: #cfe5d8; }

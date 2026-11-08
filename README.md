@@ -107,3 +107,7 @@ Al subir el CV (Word, texto, ODT o PDF hecho desde un editor) se lee su texto y 
 ## Usarlo desde el celular
 
 `python run.py --red` abre la app a tu red WiFi y muestra la dirección para escribir en el celular. Las cuentas nuevas solo se pueden crear desde la computadora. En el celular se puede "Agregar a la pantalla de inicio" para usarla como app.
+
+## Seguimiento de postulaciones
+
+En la pestaña **Aplicadas** hay un resumen (aplicadas, esperando, para seguimiento, entrevistas, ofertas, rechazadas). En cada oferta aplicada se anota cómo va (sin novedades, me respondieron, entrevista, me ofrecieron el puesto, rechazada) y se marca "Hice seguimiento hoy"; el aviso de seguimiento cuenta desde el último contacto y se apaga cuando hay entrevista, oferta o rechazo. El CSV exportado incluye el resultado y la fecha del último seguimiento.

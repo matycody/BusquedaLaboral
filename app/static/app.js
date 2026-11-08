@@ -227,7 +227,8 @@ function render() {
   const banner = due
     ? `<li><div class="notice"><strong>${due === 1 ? "1 postulación lleva" : due + " postulaciones llevan"} varios días sin novedades.</strong> Escribile a la empresa para preguntar cómo sigue.</div></li>`
     : "";
-  $("list").innerHTML = banner + rows.map(cardHtml).join("");
+  const summary = state.tab === "aplicada" ? trackSummaryHtml(rows) : "";
+  $("list").innerHTML = summary + banner + rows.map(cardHtml).join("");
   renderDetail();
   syncDetailMode();
 }
@@ -286,7 +287,32 @@ function daysSince(iso) {
 
 function needsFollowUp(j) {
   const days = ((state.cfg || {}).avisos || {}).seguimiento_dias || 7;
-  return j.status === "aplicada" && !!j.applied_at && daysSince(j.applied_at) >= days;
+  if (j.status !== "aplicada" || !j.applied_at) return false;
+  if (["entrevista", "oferta", "rechazada"].includes(j.outcome)) return false;  // ya hay novedades
+  return daysSince(j.followup_at || j.applied_at) >= days;
+}
+const OUTCOME_LABEL = { respondieron: "Me respondieron", entrevista: "Entrevista", oferta: "Me ofrecieron el puesto", rechazada: "Rechazada" };
+
+function trackHtml(j) {
+  if (j.status !== "aplicada") return "";
+  const opts = [["", "Sin novedades"], ...Object.entries(OUTCOME_LABEL)]
+    .map(([v, l]) => `<option value="${v}" ${v === (j.outcome || "") ? "selected" : ""}>${l}</option>`).join("");
+  const d = daysSince(j.applied_at);
+  const last = j.followup_at ? `Último seguimiento hace ${daysSince(j.followup_at)} ${daysSince(j.followup_at) === 1 ? "día" : "días"}.` : "Todavía no hiciste seguimiento.";
+  return `<section class="d-sec"><h3>Seguimiento</h3>
+    <p class="hint">Te postulaste hace ${d} ${d === 1 ? "día" : "días"}. ${last}</p>
+    <div class="track-row">
+      <label class="field"><span class="label">¿Cómo va?</span><select class="input" data-outcome>${opts}</select></label>
+      <button type="button" class="btn" data-act="followed">Hice seguimiento hoy</button>
+    </div></section>`;
+}
+
+function trackSummaryHtml(rows) {
+  const total = rows.length;
+  const by = (o) => rows.filter((j) => (j.outcome || "") === o).length;
+  const due = rows.filter(needsFollowUp).length;
+  const pill = (n, l, cls = "") => `<span class="ts ${cls}"><b>${n}</b>${l}</span>`;
+  return `<li><div class="track-summary">${pill(total, "aplicadas")}${pill(by("") + by("respondieron") - due, "esperando")}${pill(due, "para seguimiento", due ? "warn" : "")}${pill(by("entrevista"), "entrevistas", by("entrevista") ? "ok" : "")}${pill(by("oferta"), "ofertas", by("oferta") ? "ok" : "")}${pill(by("rechazada"), "rechazadas")}</div></li>`;
 }
 
 function tagsHtml(j) {
@@ -294,6 +320,7 @@ function tagsHtml(j) {
     `<span class="chip chip-cv" style="background:hsl(${cvHue(j.cv)} 60% 94%);color:${cvColor(j.cv)}">${esc(cvLabel(j.cv))}</span>`,
     STATUS_LABEL[j.status] ? `<span class="chip chip-${esc(j.status)}">${STATUS_LABEL[j.status]}</span>` : "",
     isNew(j) ? `<span class="chip chip-nuevo">Nueva</span>` : "",
+    j.status === "aplicada" && OUTCOME_LABEL[j.outcome] ? `<span class="chip chip-${j.outcome === "rechazada" ? "descartada" : "interesa"}">${OUTCOME_LABEL[j.outcome]}</span>` : "",
     needsFollowUp(j) ? `<span class="chip chip-seguimiento" title="Postulaste hace ${daysSince(j.applied_at)} días">Hacer seguimiento</span>` : "",
     isMyCompany(j.company) ? `<span class="chip chip-empresa">Mi empresa</span>` : "",
     j.sources.length > 1 ? `<span class="chip">${j.sources.length} portales</span>` : "",
@@ -407,6 +434,7 @@ function renderDetail() {
     <section class="d-sec"><h3>Por qué este puntaje</h3><div id="why"><p class="hint">Calculando…</p></div></section>
     <section class="d-sec"><h3>Qué CV conviene usar</h3><div class="cv-bars">${bars}</div></section>
     <section class="d-sec"><h3>Descripción</h3>${descHtml(j.description)}</section>
+    ${trackHtml(j)}
     <section class="d-sec"><h3>Dónde está publicada</h3><ul class="sources">${sources}</ul></section>
     <section class="d-sec"><h3>Mis notas</h3>
       <textarea class="input" data-notes rows="3" placeholder="Contacto, fecha de entrevista, lo que quieras recordar">${esc(j.notes)}</textarea></section>
@@ -857,6 +885,16 @@ function bind() {
       case "post":
         openPost(id);
         break;
+      case "followed": {
+        const jb = state.jobs.find((x) => x.id === id);
+        if (jb) {
+          jb.followup_at = new Date().toISOString();
+          api("/api/jobs/" + id, "POST", { followup: true });
+          toast("Anotado: seguimiento de hoy.");
+          render();
+        }
+        break;
+      }
       case "open": {
         e.preventDefault();
         const jb = state.jobs.find((x) => x.id === id);
@@ -1299,3 +1337,13 @@ function companiesWidget(ta, host) {
   }
   return render;
 }
+
+
+document.addEventListener("change", async (e) => {
+  if (!e.target.matches("[data-outcome]")) return;
+  const j = state.jobs.find((x) => x.id === state.openId);
+  if (!j) return;
+  j.outcome = e.target.value;
+  try { await api("/api/jobs/" + j.id, "POST", { outcome: j.outcome }); } catch (err) { toast("No se pudo guardar: " + err.message); }
+  render();
+});

@@ -28,6 +28,10 @@ def conn():
         # las ya marcadas como aplicadas cuentan desde hoy
         c.execute("UPDATE jobs SET applied_at=? WHERE status='aplicada'", (datetime.now(timezone.utc).isoformat(),))
         c.commit()
+    for col in ("outcome", "followup_at"):
+        if col not in cols:
+            c.execute(f"ALTER TABLE jobs ADD COLUMN {col} TEXT DEFAULT ''")
+            c.commit()
     return c
 
 
@@ -132,7 +136,10 @@ def get_job(job_id):
     return dict(r) if r else None
 
 
-def update_job(job_id, status=None, notes=None):
+OUTCOMES = ("", "respondieron", "entrevista", "oferta", "rechazada")
+
+
+def update_job(job_id, status=None, notes=None, outcome=None, followup=None):
     with conn() as c:
         if status is not None:
             c.execute("UPDATE jobs SET status=? WHERE id=?", (status, job_id))
@@ -143,12 +150,16 @@ def update_job(job_id, status=None, notes=None):
                 c.execute("UPDATE jobs SET applied_at=NULL WHERE id=?", (job_id,))
         if notes is not None:
             c.execute("UPDATE jobs SET notes=? WHERE id=?", (notes, job_id))
+        if outcome is not None and outcome in OUTCOMES:
+            c.execute("UPDATE jobs SET outcome=? WHERE id=?", (outcome, job_id))
+        if followup:
+            c.execute("UPDATE jobs SET followup_at=? WHERE id=?", (datetime.now(timezone.utc).isoformat(), job_id))
     return {"ok": True}
 
 
 EXPORT_COLUMNS = [
     ("Puesto", "title"), ("Empresa", "company"), ("Lugar", "location"), ("Puntaje", "score"),
-    ("CV usado", "cv"), ("Estado", "status"), ("Fecha de postulación", "applied_at"),
+    ("CV usado", "cv"), ("Estado", "status"), ("Fecha de postulación", "applied_at"), ("Resultado", "outcome"), ("Último seguimiento", "followup_at"),
     ("Publicada", "posted"), ("Portales", "portales"), ("Link", "link"), ("Notas", "notes"),
 ]
 
