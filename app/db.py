@@ -176,3 +176,16 @@ def clear():
     with conn() as c:
         c.execute("DELETE FROM jobs")
     return {"ok": True}
+
+
+def clean_descriptions():
+    """Limpia descripciones de Computrabajo guardadas antes con el texto de la interfaz del portal."""
+    from .sources.computrabajo import clean_description
+    n = 0
+    with conn() as c:
+        for r in c.execute("SELECT id, description FROM jobs WHERE description LIKE '%Gracias por ayudarnos%' OR description LIKE '%Aptitudes asociadas%'").fetchall():
+            new = clean_description(r["description"])
+            if new != r["description"]:
+                c.execute("UPDATE jobs SET description=? WHERE id=?", (new, r["id"]))
+                n += 1
+    return n

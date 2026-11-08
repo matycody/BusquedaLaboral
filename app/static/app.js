@@ -306,6 +306,22 @@ async function loadWhy(id) {
   }
 }
 
+function descHtml(text) {
+  if (!text) return `<p class="hint">Esta oferta no tiene descripción.</p>`;
+  const [main, portal] = String(text).split("\n§PORTAL§\n");
+  let out = `<p class="job-desc">${esc(main)}</p>`;
+  if (portal) {
+    const rows = portal.split("\n").map((l) => {
+      const i = l.indexOf(":");
+      const label = i > 0 ? l.slice(0, i) : "";
+      const items = (i > 0 ? l.slice(i + 1) : l).split(",").map((x) => x.trim()).filter(Boolean);
+      return `<div class="pt-row"><b>${esc(label)}</b><div class="pt-tags">${items.map((x) => `<span class="pt-tag">${esc(x)}</span>`).join("")}</div></div>`;
+    }).join("");
+    out += `<div class="portal-box"><div class="portal-badge">Agregado por el portal (no es parte del texto del aviso)</div>${rows}</div>`;
+  }
+  return out;
+}
+
 function renderDetail() {
   const j = state.jobs.find((x) => x.id === state.openId);
   const box = $("detail");
@@ -352,7 +368,7 @@ function renderDetail() {
     </div>
     <section class="d-sec"><h3>Por qué este puntaje</h3><div id="why"><p class="hint">Calculando…</p></div></section>
     <section class="d-sec"><h3>Qué CV conviene usar</h3><div class="cv-bars">${bars}</div></section>
-    <section class="d-sec"><h3>Descripción</h3>${j.description ? `<p class="job-desc">${esc(j.description)}</p>` : `<p class="hint">Esta oferta no tiene descripción.</p>`}</section>
+    <section class="d-sec"><h3>Descripción</h3>${descHtml(j.description)}</section>
     <section class="d-sec"><h3>Dónde está publicada</h3><ul class="sources">${sources}</ul></section>
     <section class="d-sec"><h3>Mis notas</h3>
       <textarea class="input" data-notes rows="3" placeholder="Contacto, fecha de entrevista, lo que quieras recordar">${esc(j.notes)}</textarea></section>

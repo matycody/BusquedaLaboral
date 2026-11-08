@@ -155,6 +155,11 @@ class Handler(BaseHTTPRequestHandler):
 def run(host="127.0.0.1", port=8000):
     config.load()
     db.conn().close()
+    try:
+        if db.clean_descriptions():
+            db.recalc()
+    except Exception as e:  # la limpieza nunca debe impedir que arranque
+        print("No se pudieron limpiar descripciones viejas:", e)
     stop = threading.Event()
     threading.Thread(target=search.scheduler_loop, args=(stop,), daemon=True).start()
     srv = ThreadingHTTPServer((host, port), Handler)

@@ -107,6 +107,33 @@ class _Detail(HTMLParser):
             self.parts.append(data)
 
 
+PORTAL_SEP = "§PORTAL§"
+_CUT = ("Aptitudes asociadas a esta oferta", "Avísame con ofertas similares", "Denunciar empleo",
+        "Gracias por ayudarnos a mejorar", "Hay 0 aptitudes que faltan", "Mostar competencias")
+
+
+def clean_description(text):
+    """Separa el texto del aviso de lo que agrega la página del portal (aptitudes, palabras clave, botones).
+    Lo del portal queda al final, después de PORTAL_SEP, para mostrarlo aparte."""
+    text = text or ""
+    if PORTAL_SEP in text:
+        return text
+    cuts = [text.find(c) for c in _CUT if text.find(c) != -1]
+    if not cuts:
+        return text
+    main = text[:min(cuts)].strip()
+    extra = []
+    m = re.search(r"Aptitudes asociadas a esta oferta\s*(?:Nuevo)?\s*\n(.*?)(?:\nVer \d+ aptitudes|\nHay \d+ aptitudes|\nSi las tienes|$)", text, re.S)
+    if m:
+        skills = [x.strip() for x in m.group(1).split("\n") if x.strip()]
+        if skills:
+            extra.append("Aptitudes: " + ", ".join(skills))
+    k = re.search(r"Palabras clave:\s*(.+?)(?:\nHace \d|\nAvísame|$)", text, re.S)
+    if k:
+        extra.append("Palabras clave: " + " ".join(k.group(1).split()))
+    return main + (f"\n{PORTAL_SEP}\n" + "\n".join(extra) if extra else "")
+
+
 def parse_detail(page_html):
     """Texto limpio de la descripción y los requisitos de un aviso."""
     d = _Detail()
@@ -114,7 +141,7 @@ def parse_detail(page_html):
     text = htmllib.unescape("".join(d.parts))
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n\s*\n+", "\n", text).strip()
-    return re.sub(r"^Descripción de la oferta\s*", "", text)[:4000]
+    return clean_description(re.sub(r"^Descripción de la oferta\s*", "", text)[:6000])
 
 
 def fetch_detail(url):
