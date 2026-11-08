@@ -62,6 +62,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(scoring.explain(job, config.load()))
         if u.path == "/api/config":
             return self._json(config.load())
+        if u.path == "/api/search/progress":
+            return self._json(search.PROGRESS)
         if u.path == "/api/presets":
             return self._json(presets.listing())
         if u.path == "/api/status":

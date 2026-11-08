@@ -392,10 +392,38 @@ async function runBusy(btn, busyText, fn) {
   }
 }
 
+let progTimer = null;
+function stopProgress() {
+  clearInterval(progTimer);
+  progTimer = null;
+  $("searchOverlay").hidden = true;
+}
+function startProgress() {
+  $("soFill").style.width = "2%";
+  $("soPct").textContent = "0%";
+  $("soSteps").innerHTML = "";
+  $("searchOverlay").hidden = false;
+  const icon = { espera: "○", corriendo: "…", listo: "✓", "falló": "✕" };
+  progTimer = setInterval(async () => {
+    try {
+      const p = await api("/api/search/progress");
+      const steps = p.steps || [];
+      if (!steps.length) return;
+      const hechos = steps.filter((x) => x.estado === "listo" || x.estado === "falló").length;
+      const pct = Math.min(99, Math.round((hechos / steps.length) * 100));
+      $("soFill").style.width = Math.max(pct, 3) + "%";
+      $("soPct").textContent = pct + "%";
+      $("soSteps").innerHTML = steps.map((x) => `<li class="so-${esc(x.estado === "falló" ? "fail" : x.estado)}"><span>${icon[x.estado] || "○"}</span> ${esc(x.name)}</li>`).join("");
+    } catch (e) { /* si falla una consulta, la próxima lo corrige */ }
+  }, 800);
+}
+
 async function doSearch() {
   await runBusy($("btnSearch"), "Buscando…", async () => {
     if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
-    const r = await api("/api/search", "POST");
+    startProgress();
+    let r;
+    try { r = await api("/api/search", "POST"); } finally { stopProgress(); }
     if (r.aviso) {
       toast(r.aviso);
     } else {

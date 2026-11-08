@@ -46,6 +46,15 @@ def enrich_computrabajo(conf, pause=1.0):
     return {"leidos": ok, "fallos": bad}
 
 
+PROGRESS = {"running": False, "steps": []}
+
+
+def _step(name, estado):
+    for st in PROGRESS["steps"]:
+        if st["name"] == name:
+            st["estado"] = estado
+
+
 def run_search():
     """Devuelve el resultado, o None si ya hay otra búsqueda corriendo."""
     if not _lock.acquire(blocking=False):
@@ -65,25 +74,42 @@ def run_search():
             return {"agregadas": 0, "errores": [], "empresas": [], "portales": [], "gmail": [],
                     "aviso": "No hay fuentes cargadas. Activá un portal, agregá feeds RSS o empresas con link en Configuración."}
 
-        jobs, errors = rss.fetch(feeds) if feeds else ([], [])
-        cjobs, report = companies.fetch(cfg)
+        use_emp = bool(feeds or con_url)
+        names = [n for n, _ in activos] + (["Empresas y feeds"] if use_emp else []) + (["Gmail"] if use_gm else []) + ["Guardando"]
+        PROGRESS["steps"] = [{"name": n, "estado": "espera"} for n in names]
+        PROGRESS["running"] = True
+        _step(names[0], "corriendo")
+        jobs, errors, cjobs, report = [], [], [], []
         pjobs, preport = [], []
         for name, mod in activos:
+            _step(name, "corriendo")
             got, rep = mod.fetch({**portales[name.lower()], "queries": busquedas})
             pjobs += got
             preport += [{**r, "portal": name} for r in rep]
+            _step(name, "listo" if got or not any(r.get("nota") for r in rep) else "falló")
+        if use_emp:
+            _step("Empresas y feeds", "corriendo")
+            jobs, errors = rss.fetch(feeds) if feeds else ([], [])
+            cjobs, report = companies.fetch(cfg)
+            _step("Empresas y feeds", "listo")
         gjobs, greport = [], []
         if use_gm:
+            _step("Gmail", "corriendo")
             try:
                 gjobs, greport = gmail.fetch(gm, gm_pass)
+                _step("Gmail", "listo")
             except Exception as e:
                 greport = [{"correo": "", "encontradas": 0, "nota": f"No se pudo leer Gmail: {e}"}]
+                _step("Gmail", "falló")
+        _step("Guardando", "corriendo")
         res = db.upsert_jobs(jobs + cjobs + pjobs + gjobs)
         res["detalles"] = enrich_computrabajo({**portales.get("computrabajo", {}), "queries": busquedas})
         res.update({"errores": errors, "empresas": report, "portales": preport, "gmail": greport})
         _save_state(last_search=time.time(), last_added=res["agregadas"])
+        _step("Guardando", "listo")
         return res
     finally:
+        PROGRESS["running"] = False
         _lock.release()
 
 

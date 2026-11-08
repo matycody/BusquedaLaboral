@@ -120,9 +120,10 @@ def load():
         return json.loads(json.dumps(DEFAULT))
     with open(CONFIG_PATH, encoding="utf-8") as f:
         cfg = json.load(f)
+    migrar = "busquedas" not in cfg
     for k, v in DEFAULT.items():
         cfg.setdefault(k, v)
-    if "busquedas" not in cfg:  # configuraciones viejas: unir los puestos que tenía cada portal
+    if migrar:  # configuraciones viejas: unir los puestos que tenía cada portal
         union = []
         for p in (cfg.get("portales") or {}).values():
             for q in p.get("queries", []):

@@ -105,6 +105,16 @@
   </form>
 </dialog>
 
+<div id="searchOverlay" hidden role="status" aria-live="polite">
+  <div class="so-card">
+    <div class="so-title">Buscando ofertas…</div>
+    <div class="so-bar"><div class="so-fill" id="soFill"></div></div>
+    <div class="so-pct" id="soPct">0%</div>
+    <ul class="so-steps" id="soSteps"></ul>
+    <p class="hint">Puede tardar un par de minutos. Podés seguir mirando las ofertas que ya tenés.</p>
+  </div>
+</div>
+
 <dialog id="dSetup">
   <form method="dialog" id="formSetup">
     <div class="dlg-head"><h2>¿Qué trabajo buscás?</h2></div>

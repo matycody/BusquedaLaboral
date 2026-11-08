@@ -62,3 +62,12 @@ data/                   tu base y configuración (NO se sube a GitHub)
 ## Pendiente / próximos pasos
 
 - Más portales (Indeed, LinkedIn, etc.): cada portal tiene sus reglas y bloquea scrapers, así que se agregan de a una en `app/sources/`.
+
+
+## Rubro y puestos a buscar
+
+La primera vez que se abre la app pregunta qué trabajo buscás (salud, construcción, ventas, administración, logística, gastronomía, educación, electricidad, programación, limpieza/seguridad, o puestos propios). Con eso se arman los **puestos que se buscan en todos los portales** y el puntaje de cada oferta. Se puede cambiar en Configuración → Portales → "Cambiar de rubro". Las configuraciones anteriores se migran solas.
+
+## Mientras busca
+
+Aparece un cartel con el avance por fuente (portales, empresas, Gmail, guardado). Las alertas de Computrabajo que llegan por Gmail ahora separan puesto, empresa, lugar y antigüedad.
