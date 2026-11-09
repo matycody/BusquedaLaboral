@@ -170,6 +170,10 @@ def set_secret(name, value):
     with open(sp, "w", encoding="utf-8") as f:
         json.dump(data, f)
     try:
+        os.chmod(sp, 0o600)  # solo el usuario del servidor puede leerlo
+    except OSError:
+        pass
+    try:
         os.chmod(sp, 0o600)
     except OSError:
         pass

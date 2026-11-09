@@ -15,6 +15,10 @@ services:
         value: "1"
       - key: BL_BASE_URL          # la URL pública, ej: https://buscador-empleo.onrender.com (o tu dominio)
         sync: false
+      - key: BL_OPERADOR          # quién publica el servicio (nombre o razón social), aparece en términos y privacidad
+        sync: false
+      - key: BL_CONTACTO          # correo de contacto para consultas y derechos sobre datos
+        sync: false
       - key: BREVO_API_KEY        # clave de la API de Brevo
         sync: false
       - key: BREVO_SENDER_EMAIL   # remitente verificado en Brevo

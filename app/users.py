@@ -72,7 +72,7 @@ def has_users():
     return bool(_read(USERS_PATH, []))
 
 
-def register(email, password, nombre="", verificar=False):
+def register(email, password, nombre="", verificar=False, legal=""):
     email = _norm_email(email)
     nombre = str(nombre or "").strip()[:80]
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 120:
@@ -87,7 +87,8 @@ def register(email, password, nombre="", verificar=False):
             raise AuthError("Ya hay una cuenta con ese correo. Ingresá o usá otro.")
         salt = secrets.token_hex(16)
         user = {"id": secrets.token_hex(6), "email": email, "nombre": nombre, "salt": salt,
-                "hash": _hash(password, salt), "created": time.strftime("%Y-%m-%d")}
+                "hash": _hash(password, salt), "created": time.strftime("%Y-%m-%d"),
+                "legal": {"version": legal, "fecha": time.strftime("%Y-%m-%d %H:%M")}}
         if verificar:
             user["verified"] = False  # sin la clave, las cuentas viejas cuentan como verificadas
         folder = user_dir(user["id"])

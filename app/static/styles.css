@@ -460,6 +460,9 @@ dialog::backdrop { background: rgba(21, 33, 43, 0.45); }
 .pass-row { display: flex; gap: 6px; }
 .pass-row .input { flex: 1; }
 .auth-ok { margin: 0; padding: 8px 10px; border-radius: 8px; background: #e6f4ea; color: #1e6b34; font-size: 13.5px; }
+.auth-accept { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.4; margin: 4px 0 10px; }
+.auth-accept input { margin-top: 3px; }
+.auth-legal { text-align: center; margin: 14px 0 0; }
 .auth-links { margin: 10px 0 0; text-align: center; font-size: 13px; }
 .auth-links a { color: inherit; }
 .auth-error { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fdecea; color: #a3261f; font-size: 13.5px; }

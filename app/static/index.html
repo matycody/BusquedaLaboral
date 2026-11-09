@@ -130,6 +130,7 @@
         <div class="pass-row"><input class="input" id="auPass" type="password" autocomplete="current-password" required><button type="button" class="btn btn-quiet" id="auShow">Ver</button></div>
         <p class="hint" data-only="register">Mínimo 8 caracteres.</p></div>
       <div class="field" data-only="register"><label for="auPass2">Repetí la contraseña</label><input class="input" id="auPass2" type="password" autocomplete="new-password"></div>
+      <label class="auth-accept" id="auAcceptRow"><input type="checkbox" id="auAccept"> <span>Soy mayor de 18 años y acepto los <a href="/terminos.html" target="_blank" rel="noopener">términos y condiciones</a> y la <a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a>.</span></label>
       <p class="auth-error" id="authErr" role="alert" hidden></p>
       <p class="auth-ok" id="authOk" role="status" hidden></p>
       <button type="submit" class="btn btn-primary auth-submit" id="auSubmit">Ingresar</button>
@@ -138,6 +139,7 @@
       </p>
       <p class="auth-links" id="authBack" hidden><a href="#" id="auBack">Volver a ingresar</a></p>
     </form>
+    <p class="hint auth-legal"><a href="/terminos.html" target="_blank" rel="noopener">Términos</a> · <a href="/privacidad.html" target="_blank" rel="noopener">Privacidad</a></p>
     <p class="hint auth-foot" id="authFoot">Tus datos y tus CV se guardan en esta computadora, separados por cuenta. ¿Olvidaste la contraseña? En la carpeta del programa ejecutá <code>python run.py --reset-password tu@correo.com NuevaClave123</code>.</p>
   </div>
 </div>

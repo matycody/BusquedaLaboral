@@ -16,7 +16,8 @@ Hoy el programa corre en tu computadora. Estos pasos lo dejan en un servidor con
 1. Subí el repositorio (el limpio, ver abajo) a GitHub.
 2. En Render: **New → Blueprint** y elegí el repositorio. Lee `render.yaml` y crea el servicio con un disco de 1 GB. Necesita un plan pago (el gratuito no tiene disco persistente y se duerme).
 3. Cuando Render te dé la URL, cargala en la variable `BL_BASE_URL` (los links de los mails se arman con ella). Si usás dominio propio, agregalo en Render y usá ese.
-4. Cargá `BREVO_API_KEY` y `BREVO_SENDER_EMAIL` (ver más abajo) y esperá el deploy. Render pone el HTTPS solo.
+4. Cargá `BL_OPERADOR` (tu nombre o razón social) y `BL_CONTACTO` (correo de contacto): aparecen en los términos y en la política de privacidad.
+5. Cargá `BREVO_API_KEY` y `BREVO_SENDER_EMAIL` (ver más abajo) y esperá el deploy. Render pone el HTTPS solo.
 
 ## Correos con Brevo (confirmación y recuperación de contraseña)
 1. Creá una cuenta en brevo.com (plan gratis: 300 mails por día).
@@ -30,7 +31,9 @@ Con esas dos variables, las cuentas nuevas deben confirmar el correo para ingres
 Un VPS chico con Docker y un dominio apuntando a su IP. En `docker-compose.yml` cambiá `empleo.tudominio.com` por tu dominio y ejecutá `docker compose up -d`; Caddy consigue el HTTPS solo. Los datos quedan en `./data`: copialos seguido.
 
 ## Antes de abrirlo a desconocidos (pendiente)
-- [ ] **Términos y política de privacidad**: guardás CVs y datos personales; en Argentina aplica la Ley 25.326 de protección de datos personales.
+- [ ] **Revisar con un abogado los términos y la privacidad** (`app/static/terminos.html` y `privacidad.html`): son un modelo general. Se piden al registrarse y queda guardada la versión aceptada. Si cambiás el texto, subí `LEGAL_VERSION` en `app/server.py`.
+- [ ] **Inscribir la base de datos ante la AAIP** (Registro Nacional de Bases de Datos Personales), obligación de la Ley 25.326 para quien administra datos de terceros.
+- [ ] **Contraseña de Gmail**: la contraseña de aplicación queda en un archivo del servidor sin cifrar (la política lo avisa). Para un servicio con muchos usuarios conviene cifrarla o quitar esa función del modo público.
 - [ ] **Búsquedas desde un solo servidor**: todas las cuentas buscarían desde la misma IP y los portales pueden bloquearla. Conviene cachear búsquedas comunes entre usuarios.
 - [ ] **Copias de seguridad automáticas** del disco; SQLite alcanza para decenas de usuarios, no para miles.
 - [ ] **Condiciones de uso de cada portal**: revisá que permitan mostrar sus ofertas en un servicio con otros usuarios (Remotive, por ejemplo, prohíbe reenviarlas a terceros).

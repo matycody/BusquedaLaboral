@@ -14,6 +14,8 @@ from .sources import demo
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 
+LEGAL_VERSION = "2026-11"                        # subila cuando cambien los términos o la privacidad
+LEGAL_FECHA = "9 de noviembre de 2026"
 PUBLIC = os.environ.get("BL_PUBLIC") == "1"      # servidor abierto a internet (detrás de HTTPS)
 _REGISTROS = {}                                   # ip -> momentos de registros recientes
 
@@ -182,6 +184,15 @@ class Handler(BaseHTTPRequestHandler):
             return
         with open(full, "rb") as f:
             data = f.read()
+        if os.path.basename(full) in ("terminos.html", "privacidad.html"):
+            from html import escape
+            datos = {"{{OPERADOR}}": os.environ.get("BL_OPERADOR", "el responsable de este servicio"),
+                     "{{CONTACTO}}": os.environ.get("BL_CONTACTO", "el correo de contacto del servicio"),
+                     "{{VERSION}}": LEGAL_VERSION, "{{FECHA}}": LEGAL_FECHA}
+            texto = data.decode("utf-8")
+            for k, v in datos.items():
+                texto = texto.replace(k, escape(v))
+            data = texto.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", mimetypes.guess_type(full)[0] or "application/octet-stream")
         self.send_header("Content-Length", str(len(data)))
@@ -197,6 +208,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self._begin(public=("/api/register", "/api/login", "/api/logout", "/api/forgot", "/api/resend", "/api/reset")):
             return
         if u.path == "/api/register":
+            if body.get("acepto") is not True:
+                return self._json({"error": "Para crear la cuenta tenés que aceptar los términos y la política de privacidad."}, 400)
             ip = self._ip()
             if not PUBLIC and ip not in ("127.0.0.1", "::1"):
                 return self._json({"error": "Las cuentas nuevas se crean desde la computadora donde corre el programa."}, 403)
@@ -206,7 +219,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 if u.path == "/api/register":
                     verificar = mailer.enabled()
-                    user = users.register(body.get("email"), body.get("password"), body.get("nombre"), verificar=verificar)
+                    user = users.register(body.get("email"), body.get("password"), body.get("nombre"), verificar=verificar, legal=LEGAL_VERSION)
                     if verificar:
                         enviado = self._enviar_verificacion(user)
                         return self._json({"verificar": True, "email": user["email"], "enviado": enviado})

@@ -1046,6 +1046,7 @@ function setAuthMode(mode) {
   $("auPass").required = show.includes("auPass");
   $("auSubmit").textContent = { login: "Ingresar", register: "Crear mi cuenta", forgot: "Mandarme el link", reset: "Guardar contraseña nueva" }[mode];
   $("auPass").autocomplete = mode === "login" ? "current-password" : "new-password";
+  $("auAcceptRow").hidden = mode !== "register";
   $("authLinks").hidden = !(mode === "login" && state.mail);
   $("authBack").hidden = !(mode === "forgot" || mode === "reset");
   $("authFoot").hidden = state.mail;
@@ -1081,6 +1082,7 @@ async function submitAuth(ev) {
   const email = $("auEmail").value.trim(), password = $("auPass").value;
   if (authMode === "register") {
     if (!$("auNombre").value.trim()) return err("Escribí tu nombre.");
+    if (!$("auAccept").checked) return err("Para crear la cuenta tenés que aceptar los términos y la política de privacidad.");
   }
   if (authMode === "register" || authMode === "reset") {
     if (password.length < 8) return err("La contraseña debe tener al menos 8 caracteres.");
@@ -1101,7 +1103,7 @@ async function submitAuth(ev) {
     }
     const res = await fetch("/api/" + authMode, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, nombre: $("auNombre").value.trim() }),
+      body: JSON.stringify({ email, password, nombre: $("auNombre").value.trim(), acepto: authMode === "register" && $("auAccept").checked }),
     });
     const data = await res.json();
     if (!res.ok) return err(data.error || "No se pudo ingresar.");

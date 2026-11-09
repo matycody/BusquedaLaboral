@@ -76,7 +76,7 @@ app/
 
 ## Próximos pasos
 
-- Términos y política de privacidad para el uso público.
+- Revisión legal de los términos y la privacidad, e inscripción de la base de datos (ver DEPLOY.md).
 - Portales de más países de Latinoamérica.
 - Avisos automáticos de ofertas nuevas.
 
