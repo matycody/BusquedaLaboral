@@ -71,6 +71,7 @@ DEFAULT = {
                         "programador junior", "desarrollador web", "analista de datos"],
         },
         "portalempleo": {"enabled": True, "max_pages": 2},
+        "amia": {"enabled": True},
         "linkedin": {
             "enabled": False,
             "max_pages": 1,
@@ -125,6 +126,8 @@ def load():
     migrar = "busquedas" not in cfg
     for k, v in DEFAULT.items():
         cfg.setdefault(k, copy.deepcopy(v))
+    for k, v in DEFAULT["portales"].items():  # portales agregados en versiones nuevas
+        cfg["portales"].setdefault(k, copy.deepcopy(v))
     if migrar:  # configuraciones viejas: unir los puestos que tenía cada portal
         union = []
         for p in (cfg.get("portales") or {}).values():

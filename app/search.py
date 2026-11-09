@@ -5,7 +5,7 @@ import threading
 import time
 
 from . import config, ctx, db
-from .sources import bumeran, buscojobs, companies, computrabajo, gmail, jooble, linkedin, portalempleo, rss, talent, zonajobs
+from .sources import amia, bumeran, buscojobs, companies, computrabajo, gmail, jooble, linkedin, portalempleo, rss, talent, zonajobs
 
 _locks = {}
 _guard = threading.Lock()
@@ -80,7 +80,7 @@ def run_search():
         con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
         portales = cfg.get("portales", {})
         busquedas = cfg.get("busquedas") or []
-        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("PortalEmpleo", portalempleo), ("LinkedIn", linkedin))
+        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("PortalEmpleo", portalempleo), ("AMIA", amia), ("LinkedIn", linkedin))
                    if portales.get(name.lower(), {}).get("enabled") and busquedas
                    and (name != "Jooble" or config.get_secret("jooble_key", "JOOBLE_API_KEY"))]
         gm = cfg.get("gmail", {})
