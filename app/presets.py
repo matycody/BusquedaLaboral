@@ -120,6 +120,7 @@ def apply_perfil(cfg, perfil):
     """Datos personales, zona, nivel y modalidad del registro inicial."""
     perfil = perfil or {}
     keep = {k: str(perfil.get(k, "")).strip() for k in ("nombre", "email", "telefono", "localidad", "nivel", "modalidad")}
+    keep["pais"] = str(perfil.get("pais") or "ar").strip().lower()[:2]
     keep["zonas"] = _lista(perfil.get("zonas"))
     cfg["perfil"] = {**(cfg.get("perfil") or {}), **keep}
     post = cfg.setdefault("postulacion", {})

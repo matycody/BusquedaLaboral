@@ -16,6 +16,7 @@ Funciona para **cualquier rubro** (electricidad, salud, ventas, programación, g
 
 ## Qué hace
 
+- **Varios países**: elegís en qué país buscás (Argentina, México, Chile, Perú, Ecuador, Panamá, Colombia, Uruguay, Costa Rica, República Dominicana, Guatemala, Bolivia y Paraguay). Se consulta Computrabajo de ese país y, donde existe, el portal del grupo Bumeran (Bumeran, Laborum, Multitrabajos, Konzerta). Los portales exclusivos de Argentina solo se usan con ese país.
 - **Muchas fuentes en una sola búsqueda**: Computrabajo, Bumeran, ZonaJobs, BuscoJobs, Talent.com, Portal Empleo (Estado nacional), AMIA, Jooble (con clave), LinkedIn (opcional), trabajo remoto internacional (Remotive, Jobicy, Arbeitnow), páginas de empresas, feeds RSS y alertas de Indeed/LinkedIn leídas desde Gmail.
 - **Puntaje 0-100** por oferta: coincidencia de palabras con tu rubro, zona, empresa, experiencia pedida y antigüedad. Las ofertas que no tienen nada que ver con tu perfil quedan abajo.
 - **Recomienda un CV** (podés tener uno por rubro) y lee tu CV para sugerir palabras y puestos.
@@ -77,7 +78,7 @@ app/
 ## Próximos pasos
 
 - Revisión legal de los términos y la privacidad, e inscripción de la base de datos (ver DEPLOY.md).
-- Portales de más países de Latinoamérica.
+- Más portales por país (hoy, fuera de Argentina, solo Computrabajo y el grupo Bumeran).
 - Avisos automáticos de ofertas nuevas.
 
 Más detalle de uso por pantalla en [GUIA.md](GUIA.md).

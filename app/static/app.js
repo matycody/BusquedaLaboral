@@ -685,6 +685,7 @@ function openConfig() {
     )
     .join("");
   $("cPEmail").value = (c.perfil || {}).email || "";
+  $("cPais").value = (c.perfil || {}).pais || "ar";
   enhanceAll($("dConfig"));
   showPane("perfil");
   openDialog($("dConfig"));
@@ -723,7 +724,7 @@ async function saveConfig(ev) {
     return { name: name.trim(), url: rest.join("|").trim() };
   }).filter((e) => e.name);
   cfg.penalize = linesToObj($("cPen").value);
-  cfg.perfil = { ...(cfg.perfil || {}), email: $("cPEmail").value.trim() };
+  cfg.perfil = { ...(cfg.perfil || {}), email: $("cPEmail").value.trim(), pais: $("cPais").value };
   document.querySelectorAll("[data-profile]").forEach((ta) => {
     cfg.profiles[ta.dataset.profile].keywords = linesToObj(ta.value);
   });
@@ -1161,6 +1162,17 @@ $("acDelete").addEventListener("click", async () => {
   catch (e) { toast(e.message); }
 });
 
+/* ---------- países ---------- */
+const PAISES = { ar: "Argentina", mx: "México", cl: "Chile", pe: "Perú", ec: "Ecuador", pa: "Panamá", co: "Colombia", uy: "Uruguay", cr: "Costa Rica", do: "República Dominicana", gt: "Guatemala", bo: "Bolivia", py: "Paraguay" };
+document.querySelectorAll("select[data-pais]").forEach((sel) => {
+  sel.innerHTML = Object.entries(PAISES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+});
+$("wPais").addEventListener("change", () => {
+  const ar = $("wPais").value === "ar";
+  $("wPaisHint").textContent = ar ? "Cambia los portales que se consultan: algunos solo existen en Argentina." : "Se buscará en Computrabajo" + (["co", "uy", "cr", "do", "gt", "bo", "py"].includes($("wPais").value) ? "." : " y en el portal Bumeran de ese país.") + " Escribí abajo tu localidad y zonas de ese país.";
+  if (!ar && $("wZonas").value.includes("CABA")) $("wZonas").value = "";
+});
+
 /* ---------- registro inicial / perfil ---------- */
 let wzStep = 1;
 const WZ_STEPS = 4;
@@ -1199,6 +1211,7 @@ async function openSetup() {
   $("wTel").value = per.telefono || post.telefono || "";
   $("wLocalidad").value = per.localidad || "";
   $("wModalidad").value = per.modalidad || "ambos";
+  $("wPais").value = per.pais || "ar";
   $("wZonas").value = (per.zonas || ["Buenos Aires", "Capital Federal", "CABA"]).join(", ");
   $("wNivel").value = per.nivel || "sin";
   $("wCancel").hidden = !c.setup_done;
@@ -1232,7 +1245,7 @@ async function saveSetup(ev) {
     extra: textToList($("setupExtra").value),
     perfil: {
       nombre: $("wNombre").value.trim(), email: $("wEmail").value.trim(), telefono: $("wTel").value.trim(),
-      localidad: $("wLocalidad").value.trim(), zonas: $("wZonas").value, nivel: $("wNivel").value, modalidad: $("wModalidad").value,
+      pais: $("wPais").value, localidad: $("wLocalidad").value.trim(), zonas: $("wZonas").value, nivel: $("wNivel").value, modalidad: $("wModalidad").value,
     },
   };
   try {

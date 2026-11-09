@@ -209,6 +209,8 @@
         <div class="field"><label for="setupExtra">Otros puestos (uno por línea, opcional)</label><textarea class="input" id="setupExtra" rows="2" placeholder="Ej: operador de CNC"></textarea></div>
       </section>
       <section data-step="3" hidden>
+        <div class="field"><label for="wPais">País donde buscás trabajo</label><select class="input" id="wPais" data-pais></select>
+          <p class="hint" id="wPaisHint">Cambia los portales que se consultan: algunos solo existen en Argentina.</p></div>
         <div class="cols-2">
           <div class="field"><label for="wLocalidad">Tu localidad</label><input class="input" id="wLocalidad" placeholder="Ej: Claypole"></div>
           <div class="field"><label for="wModalidad">Modalidad</label>
@@ -283,6 +285,8 @@
 
         <section class="st-pane" data-pane="lugares" hidden>
           <h3>Dónde</h3>
+          <div class="field"><label for="cPais">País donde busco trabajo</label><select class="input" id="cPais" data-pais></select>
+            <p class="hint">Computrabajo y la familia Bumeran existen en varios países. ZonaJobs, BuscoJobs, Talent, Portal Empleo y AMIA son solo de Argentina y se usan únicamente con ese país. Escribí abajo lugares de ese país.</p></div>
           <div class="field"><label for="cLocation">Mi ubicación</label><input class="input" id="cLocation" placeholder="Ej: Claypole, Buenos Aires"></div>
           <div class="field">
             <label for="cLocs">Lugares donde puedo trabajar</label>

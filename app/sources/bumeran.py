@@ -16,6 +16,12 @@ from .http import api_headers, explain
 SITES = {
     "bumeran": {"base": "https://www.bumeran.com.ar", "site_id": "BMAR", "name": "Bumeran"},
     "zonajobs": {"base": "https://www.zonajobs.com.ar", "site_id": "ZJAR", "name": "ZonaJobs"},
+    # mismo sistema en otros países (cada país tiene su marca); verificados con búsquedas reales
+    "bumeran_mx": {"base": "https://www.bumeran.com.mx", "site_id": "BMMX", "name": "Bumeran México"},
+    "bumeran_pe": {"base": "https://www.bumeran.com.pe", "site_id": "BMPE", "name": "Bumeran Perú"},
+    "laborum": {"base": "https://www.laborum.cl", "site_id": "BMCL", "name": "Laborum (Chile)"},
+    "multitrabajos": {"base": "https://www.multitrabajos.com", "site_id": "BMEC", "name": "Multitrabajos (Ecuador)"},
+    "konzerta": {"base": "https://www.konzerta.com", "site_id": "BMPA", "name": "Konzerta (Panamá)"},
 }
 BASE = SITES["bumeran"]["base"]  # compatibilidad
 

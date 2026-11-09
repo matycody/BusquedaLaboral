@@ -6,6 +6,7 @@ import html as htmllib
 from html.parser import HTMLParser
 import re
 import time
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -39,7 +40,7 @@ def _relative_date(text):
     return (now - delta).isoformat()
 
 
-def parse_page(page_html):
+def parse_page(page_html, base=BASE):
     jobs = []
     for block in page_html.split('<article class="box_offer')[1:]:
         block = block.split("</article>")[0]
@@ -61,7 +62,7 @@ def parse_page(page_html):
             "location": _clean(loc.group(1)) if loc else "",
             "description": f"Sueldo publicado: {_clean(sal.group(1))}." if sal else "",
             "posted": _relative_date(_clean(date.group(1))) if date else None,
-            "source": "Computrabajo", "url": BASE + href if href.startswith("/") else href,
+            "source": "Computrabajo", "url": base + href if href.startswith("/") else href,
         })
     return jobs
 
@@ -149,7 +150,7 @@ def fetch_detail(url):
 
 
 def _get(url, timeout=20):
-    req = urllib.request.Request(url, headers=page_headers(BASE + "/"))
+    req = urllib.request.Request(url, headers=page_headers("{0.scheme}://{0.netloc}/".format(urllib.parse.urlsplit(url))))
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read(3_000_000).decode(r.headers.get_content_charset() or "utf-8", "replace")
 
@@ -157,16 +158,19 @@ def _get(url, timeout=20):
 def fetch(conf, pause=1.0):
     """conf = {"enabled", "region", "queries", "max_pages"}. Devuelve (ofertas, informe)."""
     jobs, report = [], []
-    region = _slug(conf.get("region") or "buenos-aires-gba")
+    sub = conf.get("pais_sub") or "ar"
+    base = f"https://{sub}.computrabajo.com"
+    # las regiones («buenos-aires-gba») son de Argentina; en otros países se busca en todo el país
+    region = _slug(conf.get("region") or "buenos-aires-gba") if sub == "ar" else ""
     for q in conf.get("queries", []):
         slug, found = _slug(q), 0
         if not slug:
             continue
         note = ""
         for page in range(1, int(conf.get("max_pages", 2)) + 1):
-            url = f"{BASE}/trabajo-de-{slug}-en-{region}" + (f"?p={page}" if page > 1 else "")
+            url = f"{base}/trabajo-de-{slug}" + (f"-en-{region}" if region else "") + (f"?p={page}" if page > 1 else "")
             try:
-                got = parse_page(_get(url))
+                got = parse_page(_get(url), base)
             except Exception as e:
                 note = f"No se pudo leer: {explain(e)}"
                 break

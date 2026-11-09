@@ -4,7 +4,7 @@ import os
 import threading
 import time
 
-from . import config, ctx, db
+from . import config, countries, ctx, db
 from .sources import amia, bumeran, buscojobs, companies, computrabajo, gmail, jooble, linkedin, portalempleo, remoto, rss, talent, zonajobs
 
 _locks = {}
@@ -80,9 +80,18 @@ def run_search():
         con_url = [e for e in cfg.get("empresas", []) if e.get("url")]
         portales = cfg.get("portales", {})
         busquedas = cfg.get("busquedas") or []
-        activos = [(name, mod) for name, mod in (("Computrabajo", computrabajo), ("Bumeran", bumeran), ("ZonaJobs", zonajobs), ("BuscoJobs", buscojobs), ("Jooble", jooble), ("Talent", talent), ("PortalEmpleo", portalempleo), ("AMIA", amia), ("Remoto", remoto), ("LinkedIn", linkedin))
-                   if portales.get(name.lower(), {}).get("enabled") and busquedas
-                   and (name != "Jooble" or config.get_secret("jooble_key", "JOOBLE_API_KEY"))]
+        pais = countries.get((cfg.get("perfil") or {}).get("pais"))
+        navent = pais["navent"]
+        candidatos = [("Computrabajo", "computrabajo", lambda c: computrabajo.fetch({**c, "pais_sub": pais["computrabajo"]}))]
+        if navent:
+            candidatos.append((bumeran.SITES[navent]["name"], "bumeran", lambda c: bumeran.fetch(c, site=navent)))
+        if pais is countries.PAISES["ar"]:  # portales que solo existen para Argentina
+            candidatos += [("ZonaJobs", "zonajobs", zonajobs.fetch), ("BuscoJobs", "buscojobs", buscojobs.fetch), ("Talent", "talent", talent.fetch),
+                           ("PortalEmpleo", "portalempleo", portalempleo.fetch), ("AMIA", "amia", amia.fetch)]
+        candidatos += [("Jooble", "jooble", jooble.fetch), ("Remoto", "remoto", remoto.fetch), ("LinkedIn", "linkedin", linkedin.fetch)]
+        activos = [(name, key, fn) for name, key, fn in candidatos
+                   if portales.get(key, {}).get("enabled") and busquedas
+                   and (key != "jooble" or config.get_secret("jooble_key", "JOOBLE_API_KEY"))]
         gm = cfg.get("gmail", {})
         gm_pass = config.get_secret("gmail_password", "GMAIL_APP_PASSWORD")
         use_gm = bool(gm.get("enabled") and gm.get("email") and gm_pass)
@@ -91,16 +100,16 @@ def run_search():
                     "aviso": "No hay fuentes cargadas. Activá un portal, agregá feeds RSS o empresas con link en Configuración."}
 
         use_emp = bool(feeds or con_url)
-        names = [n for n, _ in activos] + (["Empresas y feeds"] if use_emp else []) + (["Gmail"] if use_gm else []) + ["Guardando"]
+        names = [n for n, _, _ in activos] + (["Empresas y feeds"] if use_emp else []) + (["Gmail"] if use_gm else []) + ["Guardando"]
         PROGRESS["steps"] = [{"name": n, "estado": "espera"} for n in names]
         PROGRESS["running"] = True
         PROGRESS["encontradas"] = 0
         _step(names[0], "corriendo")
         jobs, errors, cjobs, report = [], [], [], []
         pjobs, preport = [], []
-        for name, mod in activos:
+        for name, key, fn in activos:
             _step(name, "corriendo")
-            got, rep = mod.fetch({**portales[name.lower()], "queries": busquedas, "zonas": (cfg.get("perfil") or {}).get("zonas") or []})
+            got, rep = fn({**portales[key], "queries": busquedas, "zonas": (cfg.get("perfil") or {}).get("zonas") or []})
             pjobs += got
             PROGRESS["encontradas"] += len(got)
             preport += [{**r, "portal": name} for r in rep]
