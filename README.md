@@ -6,6 +6,14 @@ Funciona para **cualquier rubro** (electricidad, salud, ventas, programación, g
 
 > Proyecto personal de Matías Sosa (estudiante de Programación y Ciencia de Datos, Universidad Nacional de Guillermo Brown). Hecho en Python puro, sin frameworks ni dependencias.
 
+## Cómo se ve
+
+![Ofertas ordenadas por puntaje, con la explicación del puntaje y el CV recomendado](docs/img/ofertas.png)
+
+| Asistente de registro | Portales | En el celular |
+|---|---|---|
+| ![Elegir rubro](docs/img/asistente-rubro.png) | ![Portales de empleo](docs/img/portales.png) | <img src="docs/img/movil.png" width="200" alt="Versión móvil"> |
+
 ## Qué hace
 
 - **Muchas fuentes en una sola búsqueda**: Computrabajo, Bumeran, ZonaJobs, BuscoJobs, Talent.com, Portal Empleo (Estado nacional), AMIA, Jooble (con clave), LinkedIn (opcional), trabajo remoto internacional (Remotive, Jobicy, Arbeitnow), páginas de empresas, feeds RSS y alertas de Indeed/LinkedIn leídas desde Gmail.
@@ -41,7 +49,7 @@ Cada rubro tiene palabras con peso (por ejemplo «tablerista» pesa más que «m
 
 - **Backend**: `http.server` + `sqlite3` + `urllib` + `html.parser`, sin dependencias externas. API JSON bajo `/api/*`.
 - **Frontend**: HTML, CSS y JavaScript sin framework, pensado primero para celular (PWA instalable).
-- **Multiusuario**: cada cuenta tiene su carpeta (`data/users/<id>/`) con su base, configuración y CVs. Contraseñas con PBKDF2-SHA256, sesiones con cookie `HttpOnly`, bloqueo tras intentos fallidos y verificación de origen en cada POST.
+- **Multiusuario**: cada cuenta tiene su carpeta (`data/users/<id>/`) con su base, configuración y CVs. Confirmación de correo y recuperación de contraseña por mail (Brevo). Contraseñas con PBKDF2-SHA256, sesiones con cookie `HttpOnly`, bloqueo tras intentos fallidos y verificación de origen en cada POST.
 - **Una fuente por archivo** en `app/sources/`: cada una devuelve `(ofertas, informe)`, así agregar un portal nuevo es escribir un archivo y registrarlo en `app/search.py`.
 
 ```
@@ -68,7 +76,7 @@ app/
 
 ## Próximos pasos
 
-- Verificación de correo y recuperación de contraseña por mail (necesita un servicio de envío).
+- Términos y política de privacidad para el uso público.
 - Portales de más países de Latinoamérica.
 - Avisos automáticos de ofertas nuevas.
 
