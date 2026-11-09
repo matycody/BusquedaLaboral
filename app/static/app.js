@@ -668,6 +668,7 @@ function openConfig() {
   $("cTaOn").checked = !!((c.portales || {}).talent || {}).enabled;
   $("cPeOn").checked = !!((c.portales || {}).portalempleo || {}).enabled;
   $("cAmOn").checked = !!((c.portales || {}).amia || {}).enabled;
+  $("cReOn").checked = !!((c.portales || {}).remoto || {}).enabled;
   $("cLiOn").checked = !!((c.portales || {}).linkedin || {}).enabled;
   $("cJbOn").checked = !!((c.portales || {}).jooble || {}).enabled;
   $("cJbKey").value = "";
@@ -712,6 +713,7 @@ async function saveConfig(ev) {
   cfg.portales.talent = { ...(cfg.portales.talent || {}), enabled: $("cTaOn").checked };
   cfg.portales.portalempleo = { ...(cfg.portales.portalempleo || {}), enabled: $("cPeOn").checked };
   cfg.portales.amia = { ...(cfg.portales.amia || {}), enabled: $("cAmOn").checked };
+  cfg.portales.remoto = { ...(cfg.portales.remoto || {}), enabled: $("cReOn").checked };
   cfg.portales.linkedin = { ...(cfg.portales.linkedin || {}), enabled: $("cLiOn").checked };
   cfg.portales.jooble = { ...(cfg.portales.jooble || {}), enabled: $("cJbOn").checked };
   cfg.portales.buscojobs = { ...(cfg.portales.buscojobs || {}), enabled: $("cBjOn").checked };

@@ -72,6 +72,7 @@ DEFAULT = {
         },
         "portalempleo": {"enabled": True, "max_pages": 2},
         "amia": {"enabled": True},
+        "remoto": {"enabled": False},
         "linkedin": {
             "enabled": False,
             "max_pages": 1,

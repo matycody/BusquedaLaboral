@@ -4,6 +4,7 @@ import mimetypes
 import os
 import re
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -13,9 +14,32 @@ from .sources import demo
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 
+PUBLIC = os.environ.get("BL_PUBLIC") == "1"      # servidor abierto a internet (detrás de HTTPS)
+_REGISTROS = {}                                   # ip -> momentos de registros recientes
+
+
+def _registro_permitido(ip):
+    """Máximo 5 cuentas nuevas por hora desde la misma IP (evita cuentas masivas)."""
+    ahora = time.time()
+    recientes = [t for t in _REGISTROS.get(ip, []) if ahora - t < 3600]
+    if len(recientes) >= 5:
+        _REGISTROS[ip] = recientes
+        return False
+    _REGISTROS[ip] = recientes + [ahora]
+    return True
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
+
+    def end_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "same-origin")
+        if PUBLIC:
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
+        super().end_headers()
 
     def _token(self):
         m = re.search(r"(?:^|;\s*)sid=([\w\-]+)", self.headers.get("Cookie", ""))
@@ -31,9 +55,17 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def _ip(self):
+        """IP real del cliente (detrás de un proxy HTTPS se lee X-Forwarded-For, solo en modo público)."""
+        if PUBLIC:
+            fwd = self.headers.get("X-Forwarded-For", "")
+            if fwd:
+                return fwd.split(",")[0].strip()
+        return self.client_address[0]
+
     def _session_cookie(self, token, days=users.SESSION_DAYS):
         age = days * 86400 if token else 0
-        return f"sid={token or ''}; HttpOnly; SameSite=Lax; Path=/; Max-Age={age}"
+        return f"sid={token or ''}; HttpOnly; SameSite=Lax; Path=/; Max-Age={age}" + ("; Secure" if PUBLIC else "")
 
     def _json(self, data, code=200, headers=None):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
@@ -134,8 +166,12 @@ class Handler(BaseHTTPRequestHandler):
         body = self._body()
         if not self._begin(public=("/api/register", "/api/login", "/api/logout")):
             return
-        if u.path == "/api/register" and self.client_address[0] not in ("127.0.0.1", "::1"):
-            return self._json({"error": "Las cuentas nuevas se crean desde la computadora donde corre el programa."}, 403)
+        if u.path == "/api/register":
+            ip = self._ip()
+            if not PUBLIC and ip not in ("127.0.0.1", "::1"):
+                return self._json({"error": "Las cuentas nuevas se crean desde la computadora donde corre el programa."}, 403)
+            if PUBLIC and not _registro_permitido(ip):
+                return self._json({"error": "Demasiados registros desde tu conexión. Probá más tarde."}, 429)
         if u.path in ("/api/register", "/api/login"):
             try:
                 if u.path == "/api/register":
