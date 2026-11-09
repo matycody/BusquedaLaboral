@@ -13,6 +13,8 @@ services:
     envVars:
       - key: BL_PUBLIC
         value: "1"
+      - key: BL_SECRET_KEY        # clave maestra para cifrar contraseñas de Gmail y claves de API; Render la genera sola
+        generateValue: true
       - key: BL_BASE_URL          # la URL pública, ej: https://buscador-empleo.onrender.com (o tu dominio)
         sync: false
       - key: BL_OPERADOR          # quién publica el servicio (nombre o razón social), aparece en términos y privacidad

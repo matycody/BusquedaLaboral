@@ -145,35 +145,95 @@ def save(cfg):
         json.dump(cfg, f, ensure_ascii=False, indent=2)
 
 
-def get_secret(name, env=None):
-    """Primero la variable de entorno (si se indica), después data/secrets.json."""
-    if env and os.environ.get(env):
-        return os.environ[env]
+class SecretError(Exception):
+    pass
+
+
+PREFIX = "enc:v1:"
+
+
+def _fernet():
+    """Cifrador de esta cuenta, o None si el servidor no tiene BL_SECRET_KEY (uso local: se guarda sin cifrar).
+
+    La clave de cada cuenta sale de BL_SECRET_KEY + el id de la cuenta, así que el archivo de una cuenta
+    no sirve para leer el de otra. Si BL_SECRET_KEY cambia o se pierde, los secretos guardados no se pueden leer
+    (cada persona tendría que volver a cargarlos)."""
+    master = os.environ.get("BL_SECRET_KEY", "")
+    if not master:
+        return None
+    try:
+        from cryptography.fernet import Fernet
+    except ImportError as e:
+        raise SecretError("Falta instalar «cryptography» (pip install -r requirements.txt) para cifrar los secretos.") from e
+    import base64, hashlib, hmac
+    uid = os.path.basename(os.path.normpath(ctx.data_dir()))
+    key = hmac.new(master.encode(), b"bl-secrets:" + uid.encode(), hashlib.sha256).digest()
+    return Fernet(base64.urlsafe_b64encode(key))
+
+
+def cifrado_listo():
+    """True si se pueden guardar secretos de forma segura (con clave, o en uso local sin modo público)."""
+    if os.environ.get("BL_SECRET_KEY"):
+        return True
+    return os.environ.get("BL_PUBLIC") != "1"
+
+
+def _read_secrets():
     try:
         with open(_path("secrets.json"), encoding="utf-8") as f:
-            return json.load(f).get(name, "")
+            return json.load(f)
     except (OSError, ValueError):
-        return ""
+        return {}
+
+
+def get_secret(name, env=None):
+    """Primero la variable de entorno (si se indica), después el archivo de secretos de la cuenta."""
+    if env and os.environ.get(env):
+        return os.environ[env]
+    value = _read_secrets().get(name, "")
+    if isinstance(value, str) and value.startswith(PREFIX):
+        try:
+            return _fernet().decrypt(value[len(PREFIX):].encode()).decode()
+        except Exception:  # clave cambiada, archivo dañado o falta la biblioteca
+            return ""
+    return value
+
+
+def _write_secrets(data):
+    sp = _path("secrets.json")
+    tmp = sp + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+    try:
+        os.chmod(tmp, 0o600)  # solo el usuario del servidor puede leerlo
+    except OSError:
+        pass
+    os.replace(tmp, sp)
 
 
 def set_secret(name, value):
-    sp = _path("secrets.json")
-    try:
-        with open(sp, encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, ValueError):
-        data = {}
+    if value and not cifrado_listo():
+        raise SecretError("Este servidor no tiene configurada la clave de cifrado (BL_SECRET_KEY): no puede guardar contraseñas ni claves de forma segura.")
+    data = _read_secrets()
     if value:
-        data[name] = value
+        f = _fernet()
+        data[name] = PREFIX + f.encrypt(value.encode()).decode() if f else value
     else:
         data.pop(name, None)
-    with open(sp, "w", encoding="utf-8") as f:
-        json.dump(data, f)
-    try:
-        os.chmod(sp, 0o600)  # solo el usuario del servidor puede leerlo
-    except OSError:
-        pass
-    try:
-        os.chmod(sp, 0o600)
-    except OSError:
-        pass
+    _write_secrets(data)
+
+
+def encrypt_existing():
+    """Cifra los secretos que quedaron sin cifrar (por ejemplo, guardados antes de configurar BL_SECRET_KEY)."""
+    f = _fernet()
+    data = _read_secrets()
+    if not f or not data:
+        return 0
+    n = 0
+    for k, v in list(data.items()):
+        if isinstance(v, str) and v and not v.startswith(PREFIX):
+            data[k] = PREFIX + f.encrypt(v.encode()).decode()
+            n += 1
+    if n:
+        _write_secrets(data)
+    return n

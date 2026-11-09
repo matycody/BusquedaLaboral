@@ -265,12 +265,13 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/search":
             res = search.run_search()
             return self._json(res if res is not None else {"agregadas": 0, "aviso": "Ya hay una búsqueda en curso. Esperá a que termine."})
-        if u.path == "/api/jooble/key":
-            config.set_secret("jooble_key", "".join(str(body.get("key", "")).split()))
-            return self._json({"key_set": bool(config.get_secret("jooble_key"))})
-        if u.path == "/api/gmail/password":
-            config.set_secret("gmail_password", "".join(str(body.get("password", "")).split()))
-            return self._json({"password_set": bool(config.get_secret("gmail_password"))})
+        if u.path in ("/api/jooble/key", "/api/gmail/password"):
+            nombre, campo, salida = ("jooble_key", "key", "key_set") if u.path.endswith("key") else ("gmail_password", "password", "password_set")
+            try:
+                config.set_secret(nombre, "".join(str(body.get(campo, "")).split()))
+            except config.SecretError as e:
+                return self._json({"error": str(e)}, 400)
+            return self._json({salida: bool(config.get_secret(nombre))})
         if u.path == "/api/recalc":
             return self._json(db.recalc())
         if u.path == "/api/clear":
@@ -335,10 +336,18 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run(host="127.0.0.1", port=8000):
+    if PUBLIC and not os.environ.get("BL_SECRET_KEY"):
+        print("AVISO: falta BL_SECRET_KEY. Sin ella no se pueden guardar contraseñas de Gmail ni claves de API en modo público.")
+    if os.environ.get("BL_SECRET_KEY"):
+        try:
+            import cryptography  # noqa: F401
+        except ImportError:
+            raise SystemExit("Hay BL_SECRET_KEY pero falta la biblioteca: ejecutá  pip install -r requirements.txt")
     for folder in users.all_dirs():
         try:
             with ctx.using(folder):
                 config.load()
+                config.encrypt_existing()
                 db.conn().close()
                 if db.clean_descriptions():
                     db.recalc()

@@ -26,7 +26,7 @@ Funciona para **cualquier rubro** (electricidad, salud, ventas, programación, g
 
 ## Cómo levantarlo
 
-Necesita solo Python 3.10 o más nuevo.
+Necesita solo Python 3.10 o más nuevo (en uso local no hay nada más que instalar; para el modo público, `pip install -r requirements.txt`).
 
 ```
 git clone https://github.com/matycody/BusquedaLaboral.git
@@ -50,7 +50,7 @@ Cada rubro tiene palabras con peso (por ejemplo «tablerista» pesa más que «m
 
 - **Backend**: `http.server` + `sqlite3` + `urllib` + `html.parser`, sin dependencias externas. API JSON bajo `/api/*`.
 - **Frontend**: HTML, CSS y JavaScript sin framework, pensado primero para celular (PWA instalable).
-- **Multiusuario**: cada cuenta tiene su carpeta (`data/users/<id>/`) con su base, configuración y CVs. Confirmación de correo y recuperación de contraseña por mail (Brevo). Contraseñas con PBKDF2-SHA256, sesiones con cookie `HttpOnly`, bloqueo tras intentos fallidos y verificación de origen en cada POST.
+- **Multiusuario**: cada cuenta tiene su carpeta (`data/users/<id>/`) con su base, configuración y CVs. Contraseñas de Gmail y claves de API cifradas en modo público (Fernet, clave por cuenta). Confirmación de correo y recuperación de contraseña por mail (Brevo). Contraseñas con PBKDF2-SHA256, sesiones con cookie `HttpOnly`, bloqueo tras intentos fallidos y verificación de origen en cada POST.
 - **Una fuente por archivo** en `app/sources/`: cada una devuelve `(ofertas, informe)`, así agregar un portal nuevo es escribir un archivo y registrarlo en `app/search.py`.
 
 ```
