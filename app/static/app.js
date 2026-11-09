@@ -1010,7 +1010,7 @@ async function init() {
     toast("No se pudo conectar. ¿Sigue corriendo run.py?");
     return;
   }
-  if (!me.user) { showAuth(me.primera); return; }
+  if (!me.user) { state.mail = !!me.mail; showAuth(me.primera); return; }
   state.user = me.user;
   $("auth").hidden = true;
   $("accName").textContent = (me.user.nombre || me.user.email).split(" ")[0];
@@ -1032,18 +1032,48 @@ init();
 
 /* ---------- cuenta: ingreso, registro, salida ---------- */
 let authMode = "login";
+let resetToken = "";
 function setAuthMode(mode) {
   authMode = mode;
+  const tabs = mode === "login" || mode === "register";
+  document.querySelector(".auth-tabs").hidden = !tabs;
   document.querySelectorAll("[data-auth]").forEach((b) => b.classList.toggle("on", b.dataset.auth === mode));
-  document.querySelectorAll("#formAuth [data-only]").forEach((el) => (el.hidden = el.dataset.only !== mode));
-  $("auSubmit").textContent = mode === "login" ? "Ingresar" : "Crear mi cuenta";
+  // campos visibles por modo
+  const show = { login: ["auEmail", "auPass"], register: ["auNombre", "auEmail", "auPass", "auPass2"], forgot: ["auEmail"], reset: ["auPass", "auPass2"] }[mode];
+  ["auNombre", "auEmail", "auPass", "auPass2"].forEach((id) => { $(id).closest(".field").hidden = !show.includes(id); });
+  document.querySelectorAll("#formAuth p.hint[data-only]").forEach((el) => (el.hidden = !(mode === "register" || mode === "reset")));
+  $("auEmail").required = show.includes("auEmail");
+  $("auPass").required = show.includes("auPass");
+  $("auSubmit").textContent = { login: "Ingresar", register: "Crear mi cuenta", forgot: "Mandarme el link", reset: "Guardar contraseña nueva" }[mode];
   $("auPass").autocomplete = mode === "login" ? "current-password" : "new-password";
+  $("authLinks").hidden = !(mode === "login" && state.mail);
+  $("authBack").hidden = !(mode === "forgot" || mode === "reset");
+  $("authFoot").hidden = state.mail;
   $("authErr").hidden = true;
+  $("authOk").hidden = true;
 }
+function authMsg(t) { $("authOk").textContent = t; $("authOk").hidden = false; $("authErr").hidden = true; }
 function showAuth(primera) {
   $("auth").hidden = false;
+  const h = location.hash;
+  if (h.startsWith("#reset=")) {
+    resetToken = h.slice(7);
+    history.replaceState(null, "", location.pathname);
+    setAuthMode("reset");
+    return;
+  }
   setAuthMode(primera ? "register" : "login");
+  if (h === "#verificado" || h === "#verificado-error") {
+    history.replaceState(null, "", location.pathname);
+    if (h === "#verificado") authMsg("¡Correo confirmado! Ya podés ingresar.");
+    else { $("authErr").textContent = "El link de confirmación venció o ya se usó. Pedí uno nuevo."; $("authErr").hidden = false; }
+  }
   setTimeout(() => $("auEmail").focus(), 50);
+}
+async function mailAction(path, email) {
+  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "No se pudo enviar.");
 }
 async function submitAuth(ev) {
   ev.preventDefault();
@@ -1051,20 +1081,37 @@ async function submitAuth(ev) {
   const email = $("auEmail").value.trim(), password = $("auPass").value;
   if (authMode === "register") {
     if (!$("auNombre").value.trim()) return err("Escribí tu nombre.");
+  }
+  if (authMode === "register" || authMode === "reset") {
     if (password.length < 8) return err("La contraseña debe tener al menos 8 caracteres.");
     if (password !== $("auPass2").value) return err("Las contraseñas no coinciden.");
   }
   $("auSubmit").disabled = true;
   try {
+    if (authMode === "forgot") {
+      await mailAction("/api/forgot", email);
+      return authMsg("Si hay una cuenta con ese correo, te mandamos un link para elegir una contraseña nueva. Revisá también el spam.");
+    }
+    if (authMode === "reset") {
+      const r = await fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: resetToken, password }) });
+      const d = await r.json();
+      if (!r.ok) return err(d.error || "No se pudo cambiar la contraseña.");
+      setAuthMode("login");
+      return authMsg("Contraseña cambiada. Ingresá con la nueva.");
+    }
     const res = await fetch("/api/" + authMode, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, nombre: $("auNombre").value.trim() }),
     });
     const data = await res.json();
     if (!res.ok) return err(data.error || "No se pudo ingresar.");
+    if (data.verificar) {
+      setAuthMode("login");
+      return authMsg(data.enviado ? "Cuenta creada. Te mandamos un correo: tocá el link para confirmarlo y después ingresá." : "Cuenta creada, pero no pudimos enviar el correo. Tocá «Reenviar el correo de confirmación».");
+    }
     location.reload();
   } catch (e) {
-    err("No se pudo conectar con el programa.");
+    err(e.message && e.message !== "Failed to fetch" ? e.message : "No se pudo conectar con el programa.");
   } finally {
     $("auSubmit").disabled = false;
   }
@@ -1081,6 +1128,15 @@ async function logout() {
 }
 document.querySelectorAll("[data-auth]").forEach((b) => b.addEventListener("click", () => setAuthMode(b.dataset.auth)));
 $("formAuth").addEventListener("submit", submitAuth);
+$("auForgot").addEventListener("click", (e) => { e.preventDefault(); setAuthMode("forgot"); });
+$("auBack").addEventListener("click", (e) => { e.preventDefault(); setAuthMode("login"); });
+$("auResend").addEventListener("click", async (e) => {
+  e.preventDefault();
+  const email = $("auEmail").value.trim();
+  if (!email) { $("authErr").textContent = "Escribí tu correo arriba y volvé a tocar."; $("authErr").hidden = false; return; }
+  try { await mailAction("/api/resend", email); authMsg("Si la cuenta existe y falta confirmarla, te mandamos el correo de nuevo."); }
+  catch (err) { $("authErr").textContent = err.message; $("authErr").hidden = false; }
+});
 $("auShow").addEventListener("click", () => {
   const show = $("auPass").type === "password";
   $("auPass").type = show ? "text" : "password";

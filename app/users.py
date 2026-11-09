@@ -14,6 +14,7 @@ from . import config, ctx
 ROOT = ctx.ROOT_DATA
 USERS_PATH = os.path.join(ROOT, "users.json")
 SESSIONS_PATH = os.path.join(ROOT, "sessions.json")
+TOKENS_PATH = os.path.join(ROOT, "tokens.json")
 USERS_DIR = os.path.join(ROOT, "users")
 SESSION_DAYS = 30
 ITERATIONS = 200_000
@@ -71,7 +72,7 @@ def has_users():
     return bool(_read(USERS_PATH, []))
 
 
-def register(email, password, nombre=""):
+def register(email, password, nombre="", verificar=False):
     email = _norm_email(email)
     nombre = str(nombre or "").strip()[:80]
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 120:
@@ -87,6 +88,8 @@ def register(email, password, nombre=""):
         salt = secrets.token_hex(16)
         user = {"id": secrets.token_hex(6), "email": email, "nombre": nombre, "salt": salt,
                 "hash": _hash(password, salt), "created": time.strftime("%Y-%m-%d")}
+        if verificar:
+            user["verified"] = False  # sin la clave, las cuentas viejas cuentan como verificadas
         folder = user_dir(user["id"])
         os.makedirs(folder, exist_ok=True)
         if not users:  # la primera cuenta se queda con los datos que ya había (versión sin cuentas)
@@ -120,6 +123,8 @@ def authenticate(email, password):
             _fails[email].append(now)
             raise AuthError("Correo o contraseña incorrectos.")
         _fails.pop(email, None)
+        if user.get("verified") is False:
+            raise AuthError("Confirmá tu correo: te mandamos un link. Si no te llegó, pedí uno nuevo abajo.")
         return _public(user)
 
 
@@ -197,3 +202,58 @@ def delete_account(uid, password):
         _write(USERS_PATH, [x for x in users if x["id"] != uid])
         _drop_sessions(uid)
         shutil.rmtree(user_dir(uid), ignore_errors=True)
+
+
+# ---------- links por correo: confirmar correo y recuperar contraseña ----------
+def make_token(uid, kind, hours):
+    """Crea un link de un solo uso. Se guarda solo el hash, igual que las sesiones."""
+    token = secrets.token_urlsafe(32)
+    with _lock:
+        now = time.time()
+        toks = {k: v for k, v in _read(TOKENS_PATH, {}).items() if v["exp"] > now}
+        toks = {k: v for k, v in toks.items() if not (v["uid"] == uid and v["kind"] == kind)}  # el nuevo reemplaza al anterior
+        toks[_sid(token)] = {"uid": uid, "kind": kind, "exp": now + hours * 3600}
+        _write(TOKENS_PATH, toks)
+    return token
+
+
+def _use_token(token, kind):
+    with _lock:
+        toks = _read(TOKENS_PATH, {})
+        t = toks.pop(_sid(token or ""), None)
+        if not t or t["kind"] != kind or t["exp"] < time.time():
+            raise AuthError("El link venció o ya se usó. Pedí uno nuevo.")
+        _write(TOKENS_PATH, toks)
+        return t["uid"]
+
+
+def find_by_email(email):
+    u = next((x for x in _read(USERS_PATH, []) if x["email"] == _norm_email(email)), None)
+    return dict(u) if u else None
+
+
+def verify_email(token):
+    uid = _use_token(token, "verify")
+    with _lock:
+        users = _read(USERS_PATH, [])
+        for u in users:
+            if u["id"] == uid:
+                u["verified"] = True
+        _write(USERS_PATH, users)
+
+
+def reset_with_token(token, new):
+    if len(new or "") < 8:
+        raise AuthError("La contraseña nueva debe tener al menos 8 caracteres.")
+    uid = _use_token(token, "reset")
+    with _lock:
+        users = _read(USERS_PATH, [])
+        u = next((x for x in users if x["id"] == uid), None)
+        if not u:
+            raise AuthError("La cuenta ya no existe.")
+        u["salt"] = secrets.token_hex(16)
+        u["hash"] = _hash(new, u["salt"])
+        if u.get("verified") is False:
+            u["verified"] = True  # llegó al link por su correo: queda confirmado
+        _write(USERS_PATH, users)
+        _drop_sessions(uid)

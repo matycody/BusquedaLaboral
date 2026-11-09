@@ -8,7 +8,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, ctx, cvparse, db, presets, scoring, search, users
+from . import config, ctx, cvparse, db, mailer, presets, scoring, search, users
 from .sources import demo
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -27,6 +27,18 @@ def _registro_permitido(ip):
         return False
     _REGISTROS[ip] = recientes + [ahora]
     return True
+
+
+_LIMITES = {}
+
+
+def _limite(clave, maximo, segundos):
+    """True si todavía se puede (máximo `maximo` veces por `segundos` para esa clave)."""
+    ahora = time.time()
+    recientes = [t for t in _LIMITES.get(clave, []) if ahora - t < segundos]
+    ok = len(recientes) < maximo
+    _LIMITES[clave] = recientes + ([ahora] if ok else [])
+    return ok
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -54,6 +66,14 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "Iniciá sesión", "login": True}, 401)
             return False
         return True
+
+    def _base_url(self):
+        base = os.environ.get("BL_BASE_URL", "").rstrip("/")
+        return base or f"{'https' if PUBLIC else 'http'}://{self.headers.get('Host', 'localhost')}"
+
+    def _enviar_verificacion(self, user):
+        token = users.make_token(user["id"], "verify", 48)
+        return mailer.send_verify(user["email"], user.get("nombre", ""), f"{self._base_url()}/verify?token={token}")
 
     def _ip(self):
         """IP real del cliente (detrás de un proxy HTTPS se lee X-Forwarded-For, solo en modo público)."""
@@ -88,10 +108,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
-        if not self._begin(public=("/api/me",)):
+        if not self._begin(public=("/api/me", "/verify")):
             return
+        if u.path == "/verify":
+            try:
+                users.verify_email(parse_qs(u.query).get("token", [""])[0])
+                destino = "/#verificado"
+            except users.AuthError:
+                destino = "/#verificado-error"
+            self.send_response(302)
+            self.send_header("Location", destino)
+            self.send_header("Content-Length", "0")
+            return self.end_headers()
         if u.path == "/api/me":
-            return self._json({"user": self.user, "primera": not users.has_users()})
+            return self._json({"user": self.user, "primera": not users.has_users(), "mail": mailer.enabled()})
         if u.path == "/api/cv":
             prof = re.sub(r"\W", "", parse_qs(u.query).get("profile", [""])[0])
             folder = os.path.join(ctx.data_dir(), "cvs")
@@ -164,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin and urlparse(origin).netloc != self.headers.get("Host"):
             return self._json({"error": "Pedido no permitido"}, 403)
         body = self._body()
-        if not self._begin(public=("/api/register", "/api/login", "/api/logout")):
+        if not self._begin(public=("/api/register", "/api/login", "/api/logout", "/api/forgot", "/api/resend", "/api/reset")):
             return
         if u.path == "/api/register":
             ip = self._ip()
@@ -175,13 +205,36 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in ("/api/register", "/api/login"):
             try:
                 if u.path == "/api/register":
-                    user = users.register(body.get("email"), body.get("password"), body.get("nombre"))
+                    verificar = mailer.enabled()
+                    user = users.register(body.get("email"), body.get("password"), body.get("nombre"), verificar=verificar)
+                    if verificar:
+                        enviado = self._enviar_verificacion(user)
+                        return self._json({"verificar": True, "email": user["email"], "enviado": enviado})
                 else:
                     user = users.authenticate(body.get("email"), body.get("password"))
             except users.AuthError as e:
                 return self._json({"error": str(e)}, 400)
             token = users.new_session(user["id"])
             return self._json({"user": user}, headers={"Set-Cookie": self._session_cookie(token)})
+        if u.path in ("/api/forgot", "/api/resend"):
+            email = str(body.get("email", "")).strip().lower()
+            if not _limite(("mail", self._ip()), 10, 3600) or not _limite(("mail", email), 3, 3600):
+                return self._json({"error": "Pediste varios correos seguidos. Probá en un rato."}, 429)
+            if not mailer.enabled():
+                return self._json({"error": "Este servidor no envía correos. Pedile al administrador que cambie tu contraseña."}, 400)
+            found = users.find_by_email(email)
+            if found and u.path == "/api/forgot":
+                token = users.make_token(found["id"], "reset", 1)
+                mailer.send_reset(found["email"], f"{self._base_url()}/#reset={token}")
+            elif found and found.get("verified") is False:
+                self._enviar_verificacion(found)
+            return self._json({"ok": True})  # misma respuesta exista o no la cuenta
+        if u.path == "/api/reset":
+            try:
+                users.reset_with_token(body.get("token"), body.get("password"))
+            except users.AuthError as e:
+                return self._json({"error": str(e)}, 400)
+            return self._json({"ok": True})
         if u.path == "/api/logout":
             users.end_session(self._token())
             return self._json({"ok": True}, headers={"Set-Cookie": self._session_cookie("")})
