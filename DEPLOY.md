@@ -38,12 +38,7 @@ Un VPS chico con Docker y un dominio apuntando a su IP. En `docker-compose.yml` 
 - [ ] **Búsquedas desde un solo servidor**: todas las cuentas buscarían desde la misma IP y los portales pueden bloquearla. Conviene cachear búsquedas comunes entre usuarios.
 - [ ] **Copias de seguridad automáticas** del disco; SQLite alcanza para decenas de usuarios, no para miles.
 - [ ] **Condiciones de uso de cada portal**: revisá que permitan mostrar sus ofertas en un servicio con otros usuarios (Remotive, por ejemplo, prohíbe reenviarlas a terceros).
-- [ ] **Repositorio limpio** (ver abajo): se hace una sola vez, justo antes de publicar.
+- [x] **Repositorio limpio**: el proyecto se publica desde `buscador-empleo` (ver abajo).
 
-## Limpiar el historial del repositorio
-El historial viejo contiene datos personales. Lo más seguro es crear un repositorio nuevo con el código actual (sin `.git`) y dejar el viejo privado:
-```
-git clone https://github.com/matycody/BusquedaLaboral.git limpio && cd limpio
-rm -rf .git && git init -b main && git add -A && git commit -m "Primera versión pública"
-```
-Antes, confirmá que no queden datos tuyos en los archivos (`grep -ri "tu-apellido" .`).
+## Repositorio limpio
+El repositorio original (`BusquedaLaboral`) tiene en su historial datos personales del autor y es público. El proyecto se publica desde un repositorio nuevo con historial propio (`buscador-empleo`). Regla para no repetirlo: **nunca** subir `data/`, CVs, capturas con datos reales ni claves; `.gitignore` ya excluye `data/`, `*.db`, `.env` y `cvs/`. Para las capturas del README usá siempre cuentas de ejemplo.

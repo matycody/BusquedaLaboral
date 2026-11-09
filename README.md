@@ -29,8 +29,8 @@ Funciona para **cualquier rubro** (electricidad, salud, ventas, programación, g
 Necesita solo Python 3.10 o más nuevo (en uso local no hay nada más que instalar; para el modo público, `pip install -r requirements.txt`).
 
 ```
-git clone https://github.com/matycody/BusquedaLaboral.git
-cd BusquedaLaboral
+git clone https://github.com/matycody/buscador-empleo.git
+cd buscador-empleo
 python run.py
 ```
 
